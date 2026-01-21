@@ -4,6 +4,9 @@ export type Priority = 'none' | 'low' | 'medium' | 'high';
 // Smart list identifiers
 export type SmartListId = 'inbox' | 'today' | 'tomorrow' | 'week' | 'all' | 'completed';
 
+// View mode
+export type ViewMode = 'list' | 'calendar';
+
 // Recurrence patterns
 export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
 

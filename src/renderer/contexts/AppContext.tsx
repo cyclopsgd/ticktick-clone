@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Task, List, SmartListId, TaskWithSubtasks, Tag, TaskFilter } from '../../shared/types';
+import type { Task, List, SmartListId, TaskWithSubtasks, Tag, TaskFilter, ViewMode } from '../../shared/types';
 import { SMART_LISTS } from '../../shared/types';
 
 interface AppContextType {
@@ -39,6 +39,8 @@ interface AppContextType {
   // UI state
   isTaskDetailOpen: boolean;
   setIsTaskDetailOpen: (open: boolean) => void;
+  viewMode: ViewMode;
+  setViewMode: (mode: ViewMode) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -51,6 +53,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [selectedTask, setSelectedTask] = useState<TaskWithSubtasks | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState<TaskFilter | null>(null);
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   // Load lists from database
   const loadLists = useCallback(async () => {
@@ -256,6 +259,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setSelectedTaskId,
         isTaskDetailOpen,
         setIsTaskDetailOpen,
+        viewMode,
+        setViewMode,
       }}
     >
       {children}
