@@ -41,7 +41,7 @@ export function Sidebar() {
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold text-primary-600 dark:text-primary-400">
-            TickTick Clone
+            George's Ticker
           </h1>
           {/* View mode toggle */}
           <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 rounded-lg p-0.5">

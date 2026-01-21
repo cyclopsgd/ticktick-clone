@@ -58,7 +58,7 @@
   },
   "build": {
     "appId": "com.ticktick-clone.app",
-    "productName": "TickTick Clone",
+    "productName": "George's Ticker",
     "directories": {
       "output": "out"
     },
@@ -91,7 +91,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "TickTick Clone",
+      "shortcutName": "George's Ticker",
       "installerIcon": "build/icon.ico",
       "uninstallerIcon": "build/icon.ico",
       "installerHeaderIcon": "build/icon.ico",
