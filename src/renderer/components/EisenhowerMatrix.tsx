@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -13,6 +13,7 @@ import {
   useDraggable,
 } from '@dnd-kit/core';
 import { useApp } from '../contexts/AppContext';
+import { useToast } from './Toast';
 import { getEisenhowerQuadrant } from '../utils/taskParser';
 import type { Task, EisenhowerQuadrant, Priority } from '../../shared/types';
 
@@ -65,48 +66,79 @@ const QUADRANTS: QuadrantConfig[] = [
   },
 ];
 
+const priorityColors: Record<Priority, string> = {
+  none: 'border-gray-400 dark:border-gray-500',
+  low: 'border-green-500',
+  medium: 'border-yellow-500',
+  high: 'border-red-500',
+};
+
+const priorityBgColors: Record<Priority, string> = {
+  none: 'bg-gray-400 dark:bg-gray-500',
+  low: 'bg-green-500',
+  medium: 'bg-yellow-500',
+  high: 'bg-red-500',
+};
+
 function DraggableTask({
   task,
   onSelect,
+  onToggleComplete,
 }: {
   task: Task;
   onSelect: (id: string) => void;
+  onToggleComplete: (task: Task) => void;
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { task },
   });
+  const [isAnimating, setIsAnimating] = useState(false);
 
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date(new Date().toDateString());
+
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsAnimating(true);
+    setTimeout(() => {
+      onToggleComplete(task);
+      setIsAnimating(false);
+    }, 300);
+  };
 
   return (
     <div
       ref={setNodeRef}
-      {...listeners}
-      {...attributes}
-      onClick={() => onSelect(task.id)}
-      className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white/50 dark:hover:bg-gray-700/50 cursor-grab active:cursor-grabbing transition-colors ${
+      className={`group flex items-start gap-2 p-2 rounded-md hover:bg-white/50 dark:hover:bg-gray-700/50 transition-all ${
         isDragging ? 'opacity-50' : ''
-      }`}
+      } ${isAnimating ? 'opacity-50 scale-[0.98]' : ''}`}
     >
-      {/* Priority indicator */}
-      <div className="flex-shrink-0 mt-0.5">
-        {task.priority === 'high' && (
-          <span className="block w-2 h-2 rounded-full bg-red-500" />
+      {/* Checkbox */}
+      <button
+        onClick={handleCheckboxClick}
+        className={`flex-shrink-0 w-4 h-4 mt-0.5 rounded-full border-2 transition-all duration-200 ${
+          priorityColors[task.priority]
+        } ${isAnimating ? priorityBgColors[task.priority] + ' scale-110' : 'hover:scale-105'}`}
+      >
+        {isAnimating && (
+          <svg
+            className="w-full h-full text-white p-0.5 animate-check"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
         )}
-        {task.priority === 'medium' && (
-          <span className="block w-2 h-2 rounded-full bg-yellow-500" />
-        )}
-        {task.priority === 'low' && (
-          <span className="block w-2 h-2 rounded-full bg-green-500" />
-        )}
-        {task.priority === 'none' && (
-          <span className="block w-2 h-2 rounded-full bg-gray-300 dark:bg-gray-600" />
-        )}
-      </div>
+      </button>
 
-      {/* Task content */}
-      <div className="flex-1 min-w-0">
+      {/* Drag handle and content */}
+      <div
+        {...listeners}
+        {...attributes}
+        onClick={() => onSelect(task.id)}
+        className="flex-1 min-w-0 cursor-grab active:cursor-grabbing"
+      >
         <p className="text-sm text-gray-900 dark:text-gray-100 truncate">
           {task.title}
         </p>
@@ -157,16 +189,30 @@ function DroppableQuadrant({
   config,
   tasks,
   onSelectTask,
+  onToggleComplete,
+  onAddTask,
   isOver,
 }: {
   config: QuadrantConfig;
   tasks: Task[];
   onSelectTask: (id: string) => void;
+  onToggleComplete: (task: Task) => void;
+  onAddTask: (title: string, quadrant: EisenhowerQuadrant) => void;
   isOver: boolean;
 }) {
   const { setNodeRef } = useDroppable({
     id: config.id,
   });
+  const [isAdding, setIsAdding] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+
+  const handleAddTask = () => {
+    if (newTaskTitle.trim()) {
+      onAddTask(newTaskTitle.trim(), config.id);
+      setNewTaskTitle('');
+      setIsAdding(false);
+    }
+  };
 
   return (
     <div
@@ -177,9 +223,62 @@ function DroppableQuadrant({
     >
       {/* Header */}
       <div className="flex-shrink-0 px-3 py-2 border-b border-inherit">
-        <h3 className={`font-semibold text-sm ${config.color}`}>{config.title}</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">{config.subtitle}</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className={`font-semibold text-sm ${config.color}`}>{config.title}</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{config.subtitle}</p>
+          </div>
+          {!isAdding && (
+            <button
+              onClick={() => setIsAdding(true)}
+              className="p-1 rounded hover:bg-white/50 dark:hover:bg-gray-700/50 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+              title="Add task"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Quick add input */}
+      {isAdding && (
+        <div className="flex-shrink-0 px-2 py-2 border-b border-inherit bg-white/30 dark:bg-black/20">
+          <div className="flex items-center gap-1">
+            <input
+              type="text"
+              value={newTaskTitle}
+              onChange={e => setNewTaskTitle(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleAddTask();
+                if (e.key === 'Escape') { setIsAdding(false); setNewTaskTitle(''); }
+              }}
+              placeholder="Task title..."
+              className="flex-1 px-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              autoFocus
+            />
+            <button
+              onMouseDown={e => e.preventDefault()}
+              onClick={handleAddTask}
+              className="p-1 text-green-500 hover:bg-green-50 dark:hover:bg-green-900/30 rounded"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </button>
+            <button
+              onMouseDown={e => e.preventDefault()}
+              onClick={() => { setIsAdding(false); setNewTaskTitle(''); }}
+              className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Tasks */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[100px]">
@@ -189,7 +288,12 @@ function DroppableQuadrant({
           </p>
         ) : (
           tasks.map(task => (
-            <DraggableTask key={task.id} task={task} onSelect={onSelectTask} />
+            <DraggableTask
+              key={task.id}
+              task={task}
+              onSelect={onSelectTask}
+              onToggleComplete={onToggleComplete}
+            />
           ))
         )}
       </div>
@@ -205,7 +309,8 @@ function DroppableQuadrant({
 }
 
 export function EisenhowerMatrix() {
-  const { tasks, setSelectedTaskId, updateTask } = useApp();
+  const { tasks, setSelectedTaskId, updateTask, toggleTaskComplete, createTask } = useApp();
+  const { showToast } = useToast();
   const [activeTask, setActiveTask] = React.useState<Task | null>(null);
   const [overQuadrant, setOverQuadrant] = React.useState<EisenhowerQuadrant | null>(null);
 
@@ -238,6 +343,38 @@ export function EisenhowerMatrix() {
 
   const handleSelectTask = (taskId: string) => {
     setSelectedTaskId(taskId);
+  };
+
+  const handleToggleComplete = async (task: Task) => {
+    await toggleTaskComplete(task.id);
+    showToast(`"${task.title}" completed`, {
+      label: 'Undo',
+      onClick: async () => {
+        await updateTask(task.id, { completed: false });
+      },
+    });
+  };
+
+  const handleAddTask = async (title: string, quadrant: EisenhowerQuadrant) => {
+    // Determine priority and due date based on quadrant
+    const isImportant = quadrant === 'do-first' || quadrant === 'schedule';
+    const isUrgent = quadrant === 'do-first' || quadrant === 'delegate';
+
+    const priority: Priority = isImportant ? 'high' : 'low';
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let dueDate: string | undefined;
+    if (isUrgent) {
+      dueDate = today.toISOString().split('T')[0];
+    } else {
+      const nextWeek = new Date(today);
+      nextWeek.setDate(nextWeek.getDate() + 7);
+      dueDate = nextWeek.toISOString().split('T')[0];
+    }
+
+    await createTask(title, { priority, dueDate });
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -345,6 +482,8 @@ export function EisenhowerMatrix() {
                 config={config}
                 tasks={tasksByQuadrant[config.id]}
                 onSelectTask={handleSelectTask}
+                onToggleComplete={handleToggleComplete}
+                onAddTask={handleAddTask}
                 isOver={overQuadrant === config.id}
               />
             ))}
