@@ -291,6 +291,20 @@ export const IPC_CHANNELS = {
   MICROSOFT_SYNC: 'microsoft:sync',
   MICROSOFT_GET_SYNC_STATUS: 'microsoft:getSyncStatus',
   MICROSOFT_CLEAR_SYNC_DATA: 'microsoft:clearSyncData',
+
+  // OneDrive Backup
+  ONEDRIVE_BACKUP: 'onedrive:backup',
+  ONEDRIVE_LIST_BACKUPS: 'onedrive:listBackups',
+  ONEDRIVE_RESTORE: 'onedrive:restore',
+  ONEDRIVE_DELETE_BACKUP: 'onedrive:deleteBackup',
+  ONEDRIVE_GET_SETTINGS: 'onedrive:getSettings',
+  ONEDRIVE_SET_AUTO_BACKUP: 'onedrive:setAutoBackup',
+
+  // Outlook Calendar
+  OUTLOOK_SYNC_CALENDAR: 'outlook:syncCalendar',
+  OUTLOOK_GET_STATUS: 'outlook:getStatus',
+  OUTLOOK_SET_ENABLED: 'outlook:setEnabled',
+  OUTLOOK_CLEAR_DATA: 'outlook:clearData',
 } as const;
 
 // Application settings
@@ -514,4 +528,37 @@ export interface MicrosoftSyncStatus {
 export interface MicrosoftConfigStatus {
   configured: boolean;
   clientId: string;
+}
+
+// OneDrive Backup Types
+export interface OneDriveBackup {
+  name: string;
+  size: number;
+  createdAt: string;
+  id: string;
+}
+
+export interface OneDriveBackupSettings {
+  lastBackupTime: string | null;
+  autoBackupEnabled: boolean;
+}
+
+export interface OneDriveBackupResult {
+  success: boolean;
+  message: string;
+  backupName?: string;
+}
+
+// Outlook Calendar Types
+export interface OutlookCalendarStatus {
+  lastSyncTime: string | null;
+  eventCount: number;
+  syncEnabled: boolean;
+}
+
+export interface OutlookCalendarSyncResult {
+  success: boolean;
+  created: number;
+  updated: number;
+  errors: string[];
 }

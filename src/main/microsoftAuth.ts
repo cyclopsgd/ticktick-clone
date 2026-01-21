@@ -12,8 +12,14 @@ const MICROSOFT_CONFIG = {
   clientId: process.env.MICROSOFT_CLIENT_ID || 'YOUR_CLIENT_ID_HERE',
   // Using common for multi-tenant support
   authority: 'https://login.microsoftonline.com/common',
-  // Scopes needed for To Do access
-  scopes: ['Tasks.ReadWrite', 'User.Read', 'offline_access'],
+  // Scopes needed for To Do, OneDrive, and Calendar access
+  scopes: [
+    'Tasks.ReadWrite',      // Microsoft To Do
+    'User.Read',            // User profile
+    'Files.ReadWrite',      // OneDrive files
+    'Calendars.ReadWrite',  // Outlook Calendar
+    'offline_access',       // Refresh tokens
+  ],
 };
 
 // Store schema type

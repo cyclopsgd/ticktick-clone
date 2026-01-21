@@ -21,6 +21,20 @@ import {
   getSyncStatus,
   clearSyncData,
 } from './microsoftSync';
+import {
+  backupToOneDrive,
+  listBackups,
+  restoreFromBackup,
+  deleteBackup,
+  getBackupSettings,
+  setAutoBackupEnabled,
+} from './oneDriveBackup';
+import {
+  syncCalendar,
+  getCalendarSyncStatus,
+  setCalendarSyncEnabled,
+  clearCalendarSyncData,
+} from './outlookCalendar';
 
 // Settings stored in memory (will be persisted to database later)
 let settings: AppSettings = { ...DEFAULT_SETTINGS };
@@ -307,5 +321,47 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.MICROSOFT_CLEAR_SYNC_DATA, () => {
     return clearSyncData();
+  });
+
+  // OneDrive backup handlers
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_BACKUP, () => {
+    return backupToOneDrive();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_LIST_BACKUPS, () => {
+    return listBackups();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_RESTORE, (_event, backupId: string) => {
+    return restoreFromBackup(backupId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_DELETE_BACKUP, (_event, backupId: string) => {
+    return deleteBackup(backupId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_GET_SETTINGS, () => {
+    return getBackupSettings();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ONEDRIVE_SET_AUTO_BACKUP, (_event, enabled: boolean) => {
+    return setAutoBackupEnabled(enabled);
+  });
+
+  // Outlook calendar handlers
+  ipcMain.handle(IPC_CHANNELS.OUTLOOK_SYNC_CALENDAR, () => {
+    return syncCalendar();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OUTLOOK_GET_STATUS, () => {
+    return getCalendarSyncStatus();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OUTLOOK_SET_ENABLED, (_event, enabled: boolean) => {
+    return setCalendarSyncEnabled(enabled);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.OUTLOOK_CLEAR_DATA, () => {
+    return clearCalendarSyncData();
   });
 }

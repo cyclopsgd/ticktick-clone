@@ -35,6 +35,11 @@ import type {
   MicrosoftSyncResult,
   MicrosoftSyncStatus,
   MicrosoftConfigStatus,
+  OneDriveBackup,
+  OneDriveBackupSettings,
+  OneDriveBackupResult,
+  OutlookCalendarStatus,
+  OutlookCalendarSyncResult,
 } from '../shared/types';
 
 // Expose protected methods that allow the renderer process to use
@@ -221,6 +226,34 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.MICROSOFT_GET_SYNC_STATUS),
     clearSyncData: (): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.MICROSOFT_CLEAR_SYNC_DATA),
+  },
+
+  // OneDrive backup operations
+  onedrive: {
+    backup: (): Promise<OneDriveBackupResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_BACKUP),
+    listBackups: (): Promise<{ success: boolean; backups: OneDriveBackup[]; message?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_LIST_BACKUPS),
+    restore: (backupId: string): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_RESTORE, backupId),
+    deleteBackup: (backupId: string): Promise<{ success: boolean; message: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_DELETE_BACKUP, backupId),
+    getSettings: (): Promise<OneDriveBackupSettings> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_GET_SETTINGS),
+    setAutoBackup: (enabled: boolean): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ONEDRIVE_SET_AUTO_BACKUP, enabled),
+  },
+
+  // Outlook calendar operations
+  outlook: {
+    syncCalendar: (): Promise<OutlookCalendarSyncResult> =>
+      ipcRenderer.invoke(IPC_CHANNELS.OUTLOOK_SYNC_CALENDAR),
+    getStatus: (): Promise<OutlookCalendarStatus> =>
+      ipcRenderer.invoke(IPC_CHANNELS.OUTLOOK_GET_STATUS),
+    setEnabled: (enabled: boolean): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.OUTLOOK_SET_ENABLED, enabled),
+    clearData: (): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.OUTLOOK_CLEAR_DATA),
   },
 };
 
