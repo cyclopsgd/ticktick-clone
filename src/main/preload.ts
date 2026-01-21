@@ -19,6 +19,18 @@ import type {
   TaskFilter,
   SmartListId,
   AppSettings,
+  PomodoroSession,
+  PomodoroSettings,
+  PomodoroStats,
+  CreatePomodoroSessionDTO,
+  UpdatePomodoroSessionDTO,
+  Habit,
+  HabitCompletion,
+  HabitWithStats,
+  CreateHabitDTO,
+  UpdateHabitDTO,
+  TaskStats,
+  DashboardStats,
 } from '../shared/types';
 
 // Expose protected methods that allow the renderer process to use
@@ -131,6 +143,56 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.THEME_SET, theme),
     getSystem: (): Promise<'light' | 'dark'> =>
       ipcRenderer.invoke(IPC_CHANNELS.THEME_GET_SYSTEM),
+  },
+
+  // Pomodoro operations
+  pomodoro: {
+    createSession: (data: CreatePomodoroSessionDTO): Promise<PomodoroSession> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_CREATE_SESSION, data),
+    getAll: (): Promise<PomodoroSession[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_GET_ALL),
+    getByTask: (taskId: string): Promise<PomodoroSession[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_GET_BY_TASK, taskId),
+    update: (id: string, data: UpdatePomodoroSessionDTO): Promise<PomodoroSession | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_UPDATE, id, data),
+    delete: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_DELETE, id),
+    getStats: (): Promise<PomodoroStats> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_GET_STATS),
+    getSettings: (): Promise<PomodoroSettings> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_GET_SETTINGS),
+    updateSettings: (data: Partial<PomodoroSettings>): Promise<PomodoroSettings> =>
+      ipcRenderer.invoke(IPC_CHANNELS.POMODORO_UPDATE_SETTINGS, data),
+  },
+
+  // Habit operations
+  habit: {
+    create: (data: CreateHabitDTO): Promise<Habit> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_CREATE, data),
+    getAll: (includeArchived?: boolean): Promise<Habit[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_GET_ALL, includeArchived),
+    getById: (id: string): Promise<Habit | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_GET_BY_ID, id),
+    update: (id: string, data: UpdateHabitDTO): Promise<Habit | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_UPDATE, id, data),
+    delete: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_DELETE, id),
+    complete: (habitId: string, date?: string): Promise<HabitCompletion | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_COMPLETE, habitId, date),
+    uncomplete: (habitId: string, date?: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_UNCOMPLETE, habitId, date),
+    getCompletions: (habitId: string, startDate?: string, endDate?: string): Promise<HabitCompletion[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_GET_COMPLETIONS, habitId, startDate, endDate),
+    getAllWithStats: (includeArchived?: boolean): Promise<HabitWithStats[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.HABIT_GET_WITH_STATS, includeArchived),
+  },
+
+  // Statistics operations
+  stats: {
+    getTaskStats: (): Promise<TaskStats> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STATS_GET_TASK_STATS),
+    getDashboard: (): Promise<DashboardStats> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STATS_GET_DASHBOARD),
   },
 };
 

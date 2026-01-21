@@ -1,10 +1,13 @@
 import { ipcMain, nativeTheme } from 'electron';
-import { IPC_CHANNELS, DEFAULT_SETTINGS, type AppSettings } from '../shared/types';
+import { IPC_CHANNELS, DEFAULT_SETTINGS, type AppSettings, type PomodoroSettings } from '../shared/types';
 import { taskService, subtaskService } from '../database/taskService';
 import { listService } from '../database/listService';
 import { tagService, searchService } from '../database/tagService';
 import { recurrenceService } from '../database/recurrenceService';
 import { reminderService } from '../database/reminderService';
+import { pomodoroService } from '../database/pomodoroService';
+import { habitService } from '../database/habitService';
+import { statsService } from '../database/statsService';
 import { addAndScheduleReminder, snoozeReminder, deleteReminder } from './reminderManager';
 
 // Settings stored in memory (will be persisted to database later)
@@ -172,5 +175,84 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.THEME_GET_SYSTEM, () => {
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+  });
+
+  // Pomodoro handlers
+  ipcMain.handle(IPC_CHANNELS.POMODORO_CREATE_SESSION, (_event, data) => {
+    return pomodoroService.create(data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_GET_ALL, () => {
+    return pomodoroService.getAll();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_GET_BY_TASK, (_event, taskId) => {
+    return pomodoroService.getByTaskId(taskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_UPDATE, (_event, id, data) => {
+    return pomodoroService.update(id, data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_DELETE, (_event, id) => {
+    return pomodoroService.delete(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_GET_STATS, () => {
+    return pomodoroService.getStats();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_GET_SETTINGS, () => {
+    return pomodoroService.getSettings();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.POMODORO_UPDATE_SETTINGS, (_event, data: Partial<PomodoroSettings>) => {
+    return pomodoroService.updateSettings(data);
+  });
+
+  // Habit handlers
+  ipcMain.handle(IPC_CHANNELS.HABIT_CREATE, (_event, data) => {
+    return habitService.create(data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_GET_ALL, (_event, includeArchived) => {
+    return habitService.getAll(includeArchived);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_GET_BY_ID, (_event, id) => {
+    return habitService.getById(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_UPDATE, (_event, id, data) => {
+    return habitService.update(id, data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_DELETE, (_event, id) => {
+    return habitService.delete(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_COMPLETE, (_event, habitId, date) => {
+    return habitService.complete(habitId, date);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_UNCOMPLETE, (_event, habitId, date) => {
+    return habitService.uncomplete(habitId, date);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_GET_COMPLETIONS, (_event, habitId, startDate, endDate) => {
+    return habitService.getCompletions(habitId, startDate, endDate);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.HABIT_GET_WITH_STATS, (_event, includeArchived) => {
+    return habitService.getAllWithStats(includeArchived);
+  });
+
+  // Statistics handlers
+  ipcMain.handle(IPC_CHANNELS.STATS_GET_TASK_STATS, () => {
+    return statsService.getTaskStats();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.STATS_GET_DASHBOARD, () => {
+    return statsService.getDashboard();
   });
 }

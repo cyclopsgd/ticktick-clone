@@ -136,4 +136,75 @@ CREATE INDEX IF NOT EXISTS idx_reminders_task_id ON reminders(task_id);
 CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(reminder_time);
 `,
   },
+  {
+    version: 4,
+    name: 'add_pomodoro_tables',
+    sql: `
+-- Pomodoro sessions table
+CREATE TABLE IF NOT EXISTS pomodoro_sessions (
+  id TEXT PRIMARY KEY,
+  task_id TEXT,
+  status TEXT NOT NULL DEFAULT 'work' CHECK(status IN ('work', 'short_break', 'long_break', 'paused', 'completed')),
+  duration_minutes INTEGER NOT NULL,
+  actual_minutes INTEGER DEFAULT 0,
+  started_at TEXT NOT NULL,
+  completed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE SET NULL
+);
+
+-- Pomodoro settings table (single row)
+CREATE TABLE IF NOT EXISTS pomodoro_settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  work_duration INTEGER NOT NULL DEFAULT 25,
+  short_break_duration INTEGER NOT NULL DEFAULT 5,
+  long_break_duration INTEGER NOT NULL DEFAULT 15,
+  sessions_before_long_break INTEGER NOT NULL DEFAULT 4,
+  auto_start_breaks INTEGER NOT NULL DEFAULT 0,
+  auto_start_work INTEGER NOT NULL DEFAULT 0,
+  notification_sound INTEGER NOT NULL DEFAULT 1
+);
+
+-- Insert default settings
+INSERT OR IGNORE INTO pomodoro_settings (id) VALUES (1);
+
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_task_id ON pomodoro_sessions(task_id);
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_started_at ON pomodoro_sessions(started_at);
+CREATE INDEX IF NOT EXISTS idx_pomodoro_sessions_status ON pomodoro_sessions(status);
+`,
+  },
+  {
+    version: 5,
+    name: 'add_habits_tables',
+    sql: `
+-- Habits table
+CREATE TABLE IF NOT EXISTS habits (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  color TEXT DEFAULT '#10b981',
+  icon TEXT DEFAULT '✓',
+  frequency TEXT NOT NULL DEFAULT 'daily' CHECK(frequency IN ('daily', 'weekly', 'custom')),
+  target_days TEXT DEFAULT '[]',
+  reminder_time TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  archived INTEGER NOT NULL DEFAULT 0
+);
+
+-- Habit completions table
+CREATE TABLE IF NOT EXISTS habit_completions (
+  id TEXT PRIMARY KEY,
+  habit_id TEXT NOT NULL,
+  completed_date TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
+  UNIQUE(habit_id, completed_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_habits_archived ON habits(archived);
+CREATE INDEX IF NOT EXISTS idx_habit_completions_habit_id ON habit_completions(habit_id);
+CREATE INDEX IF NOT EXISTS idx_habit_completions_date ON habit_completions(completed_date);
+`,
+  },
 ];

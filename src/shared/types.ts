@@ -241,6 +241,31 @@ export const IPC_CHANNELS = {
   THEME_GET: 'theme:get',
   THEME_SET: 'theme:set',
   THEME_GET_SYSTEM: 'theme:getSystem',
+
+  // Pomodoro
+  POMODORO_CREATE_SESSION: 'pomodoro:createSession',
+  POMODORO_GET_ALL: 'pomodoro:getAll',
+  POMODORO_GET_BY_TASK: 'pomodoro:getByTask',
+  POMODORO_UPDATE: 'pomodoro:update',
+  POMODORO_DELETE: 'pomodoro:delete',
+  POMODORO_GET_STATS: 'pomodoro:getStats',
+  POMODORO_GET_SETTINGS: 'pomodoro:getSettings',
+  POMODORO_UPDATE_SETTINGS: 'pomodoro:updateSettings',
+
+  // Habits
+  HABIT_CREATE: 'habit:create',
+  HABIT_GET_ALL: 'habit:getAll',
+  HABIT_GET_BY_ID: 'habit:getById',
+  HABIT_UPDATE: 'habit:update',
+  HABIT_DELETE: 'habit:delete',
+  HABIT_COMPLETE: 'habit:complete',
+  HABIT_UNCOMPLETE: 'habit:uncomplete',
+  HABIT_GET_COMPLETIONS: 'habit:getCompletions',
+  HABIT_GET_WITH_STATS: 'habit:getWithStats',
+
+  // Statistics
+  STATS_GET_TASK_STATS: 'stats:getTaskStats',
+  STATS_GET_DASHBOARD: 'stats:getDashboard',
 } as const;
 
 // Application settings
@@ -269,3 +294,156 @@ export const SMART_LISTS: { id: SmartListId; name: string; icon: string }[] = [
   { id: 'all', name: 'All Tasks', icon: '📋' },
   { id: 'completed', name: 'Completed', icon: '✅' },
 ];
+
+// ============================================================================
+// Phase 3: Pomodoro Timer Types
+// ============================================================================
+
+// Pomodoro session status
+export type PomodoroStatus = 'work' | 'short_break' | 'long_break' | 'paused' | 'completed';
+
+// Pomodoro session interface
+export interface PomodoroSession {
+  id: string;
+  taskId: string | null;
+  status: PomodoroStatus;
+  durationMinutes: number;
+  actualMinutes: number;
+  startedAt: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+// Pomodoro settings interface
+export interface PomodoroSettings {
+  workDuration: number; // minutes
+  shortBreakDuration: number; // minutes
+  longBreakDuration: number; // minutes
+  sessionsBeforeLongBreak: number;
+  autoStartBreaks: boolean;
+  autoStartWork: boolean;
+  notificationSound: boolean;
+}
+
+export const DEFAULT_POMODORO_SETTINGS: PomodoroSettings = {
+  workDuration: 25,
+  shortBreakDuration: 5,
+  longBreakDuration: 15,
+  sessionsBeforeLongBreak: 4,
+  autoStartBreaks: false,
+  autoStartWork: false,
+  notificationSound: true,
+};
+
+// Pomodoro DTOs
+export interface CreatePomodoroSessionDTO {
+  taskId?: string | null;
+  status: PomodoroStatus;
+  durationMinutes: number;
+}
+
+export interface UpdatePomodoroSessionDTO {
+  status?: PomodoroStatus;
+  actualMinutes?: number;
+  completedAt?: string | null;
+}
+
+// Pomodoro statistics
+export interface PomodoroStats {
+  totalSessions: number;
+  totalFocusMinutes: number;
+  sessionsToday: number;
+  focusMinutesToday: number;
+  sessionsByTask: { taskId: string; taskTitle: string; sessions: number; minutes: number }[];
+}
+
+// ============================================================================
+// Phase 3: Habit Tracker Types
+// ============================================================================
+
+// Habit frequency type
+export type HabitFrequency = 'daily' | 'weekly' | 'custom';
+
+// Habit interface
+export interface Habit {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  icon: string;
+  frequency: HabitFrequency;
+  targetDays: number[]; // For weekly: 0-6 (Sun-Sat), for custom: specific days
+  reminderTime: string | null; // HH:mm format
+  createdAt: string;
+  updatedAt: string;
+  archived: boolean;
+}
+
+// Habit completion record
+export interface HabitCompletion {
+  id: string;
+  habitId: string;
+  completedDate: string; // YYYY-MM-DD
+  createdAt: string;
+}
+
+// Habit with streak info
+export interface HabitWithStats extends Habit {
+  currentStreak: number;
+  longestStreak: number;
+  completedToday: boolean;
+  completionRate: number; // percentage
+}
+
+// Habit DTOs
+export interface CreateHabitDTO {
+  name: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  frequency: HabitFrequency;
+  targetDays?: number[];
+  reminderTime?: string | null;
+}
+
+export interface UpdateHabitDTO {
+  name?: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  frequency?: HabitFrequency;
+  targetDays?: number[];
+  reminderTime?: string | null;
+  archived?: boolean;
+}
+
+// ============================================================================
+// Phase 3: Statistics Types
+// ============================================================================
+
+// Task statistics
+export interface TaskStats {
+  totalTasks: number;
+  completedTasks: number;
+  pendingTasks: number;
+  overdueTasks: number;
+  completionRate: number;
+  tasksCompletedByDay: { date: string; count: number }[];
+  tasksCompletedByWeek: { week: string; count: number }[];
+  tasksByPriority: { priority: Priority; count: number }[];
+  tasksByList: { listId: string; listName: string; count: number }[];
+  averageCompletionTime: number; // hours from creation to completion
+}
+
+// Combined statistics dashboard
+export interface DashboardStats {
+  tasks: TaskStats;
+  pomodoro: PomodoroStats;
+  habits: {
+    totalHabits: number;
+    activeHabits: number;
+    completedToday: number;
+    averageStreak: number;
+    longestStreak: number;
+  };
+}
