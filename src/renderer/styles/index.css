@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Drag handle cursor */
+.drag-handle {
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Task item animations */
+.task-item {
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.task-item:hover {
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.dark .task-item:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Checkbox styles */
+.checkbox-priority-none {
+  border-color: #94a3b8;
+}
+
+.checkbox-priority-low {
+  border-color: #22c55e;
+}
+
+.checkbox-priority-medium {
+  border-color: #f59e0b;
+}
+
+.checkbox-priority-high {
+  border-color: #ef4444;
+}
+
+/* Sidebar styles */
+.sidebar-item {
+  transition: background-color 0.15s ease;
+}
+
+.sidebar-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark .sidebar-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-item.active {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.dark .sidebar-item.active {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Focus styles */
+input:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+}
+
+/* Slide panel animation */
+.slide-panel {
+  transition: transform 0.2s ease-out;
+}
+
+/* Priority badge colors */
+.priority-low {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.priority-medium {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.priority-high {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.dark .priority-low {
+  background-color: #166534;
+  color: #dcfce7;
+}
+
+.dark .priority-medium {
+  background-color: #92400e;
+  color: #fef3c7;
+}
+
+.dark .priority-high {
+  background-color: #991b1b;
+  color: #fee2e2;
+}

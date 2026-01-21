@@ -1,0 +1,368 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../contexts/AppContext';
+import type { Priority, Subtask } from '../../shared/types';
+
+const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
+  { value: 'none', label: 'None', color: 'text-gray-500' },
+  { value: 'low', label: 'Low', color: 'text-green-500' },
+  { value: 'medium', label: 'Medium', color: 'text-yellow-500' },
+  { value: 'high', label: 'High', color: 'text-red-500' },
+];
+
+export function TaskDetail() {
+  const {
+    selectedTask,
+    setSelectedTaskId,
+    updateTask,
+    deleteTask,
+    lists,
+    isTaskDetailOpen,
+    setIsTaskDetailOpen,
+  } = useApp();
+
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [dueTime, setDueTime] = useState('');
+  const [priority, setPriority] = useState<Priority>('none');
+  const [listId, setListId] = useState<string | null>(null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+
+  // Update local state when selected task changes
+  useEffect(() => {
+    if (selectedTask) {
+      setTitle(selectedTask.title);
+      setDescription(selectedTask.description);
+      setNotes(selectedTask.notes);
+      setDueDate(selectedTask.dueDate ?? '');
+      setDueTime(selectedTask.dueTime ?? '');
+      setPriority(selectedTask.priority);
+      setListId(selectedTask.listId);
+      setSubtasks(selectedTask.subtasks || []);
+    }
+  }, [selectedTask]);
+
+  if (!isTaskDetailOpen || !selectedTask) {
+    return null;
+  }
+
+  const handleClose = () => {
+    setIsTaskDetailOpen(false);
+    setSelectedTaskId(null);
+  };
+
+  const handleSave = async () => {
+    await updateTask(selectedTask.id, {
+      title,
+      description,
+      notes,
+      dueDate: dueDate || null,
+      dueTime: dueTime || null,
+      priority,
+      listId,
+    });
+  };
+
+  const handleDelete = async () => {
+    if (confirm('Delete this task?')) {
+      await deleteTask(selectedTask.id);
+    }
+  };
+
+  const handleAddSubtask = async () => {
+    if (newSubtaskTitle.trim()) {
+      const subtask = await window.electronAPI.subtask.create({
+        taskId: selectedTask.id,
+        title: newSubtaskTitle.trim(),
+      });
+      setSubtasks([...subtasks, subtask]);
+      setNewSubtaskTitle('');
+    }
+  };
+
+  const handleToggleSubtask = async (subtaskId: string) => {
+    const subtask = subtasks.find(s => s.id === subtaskId);
+    if (subtask) {
+      await window.electronAPI.subtask.update(subtaskId, {
+        completed: !subtask.completed,
+      });
+      setSubtasks(
+        subtasks.map(s =>
+          s.id === subtaskId ? { ...s, completed: !s.completed } : s
+        )
+      );
+    }
+  };
+
+  const handleDeleteSubtask = async (subtaskId: string) => {
+    await window.electronAPI.subtask.delete(subtaskId);
+    setSubtasks(subtasks.filter(s => s.id !== subtaskId));
+  };
+
+  return (
+    <div className="w-96 h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+          Task Details
+        </h3>
+        <button
+          onClick={handleClose}
+          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+        >
+          <svg
+            className="w-5 h-5 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Title */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Title
+          </label>
+          <input
+            type="text"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            onBlur={handleSave}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          />
+        </div>
+
+        {/* List */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            List
+          </label>
+          <select
+            value={listId ?? ''}
+            onChange={e => {
+              setListId(e.target.value || null);
+              updateTask(selectedTask.id, { listId: e.target.value || null });
+            }}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          >
+            <option value="">Inbox (No List)</option>
+            {lists.map(list => (
+              <option key={list.id} value={list.id}>
+                {list.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Due date & time */}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Due Date
+            </label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={e => {
+                setDueDate(e.target.value);
+                updateTask(selectedTask.id, { dueDate: e.target.value || null });
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Due Time
+            </label>
+            <input
+              type="time"
+              value={dueTime}
+              onChange={e => {
+                setDueTime(e.target.value);
+                updateTask(selectedTask.id, { dueTime: e.target.value || null });
+              }}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+            />
+          </div>
+        </div>
+
+        {/* Priority */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Priority
+          </label>
+          <div className="flex gap-2">
+            {PRIORITY_OPTIONS.map(option => (
+              <button
+                key={option.value}
+                onClick={() => {
+                  setPriority(option.value);
+                  updateTask(selectedTask.id, { priority: option.value });
+                }}
+                className={`flex-1 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                  priority === option.value
+                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-800'
+                } ${option.color}`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Description */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Description
+          </label>
+          <textarea
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            onBlur={handleSave}
+            rows={3}
+            placeholder="Add a description..."
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
+          />
+        </div>
+
+        {/* Subtasks */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Subtasks ({subtasks.filter(s => s.completed).length}/{subtasks.length})
+          </label>
+
+          <div className="space-y-2">
+            {subtasks.map(subtask => (
+              <div
+                key={subtask.id}
+                className="flex items-center gap-2 group"
+              >
+                <button
+                  onClick={() => handleToggleSubtask(subtask.id)}
+                  className={`flex-shrink-0 w-4 h-4 rounded border-2 transition-colors ${
+                    subtask.completed
+                      ? 'bg-primary-500 border-primary-500'
+                      : 'border-gray-400'
+                  }`}
+                >
+                  {subtask.completed && (
+                    <svg
+                      className="w-full h-full text-white"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={3}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  )}
+                </button>
+                <span
+                  className={`flex-1 text-sm ${
+                    subtask.completed
+                      ? 'line-through text-gray-400'
+                      : 'text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {subtask.title}
+                </span>
+                <button
+                  onClick={() => handleDeleteSubtask(subtask.id)}
+                  className="p-1 opacity-0 group-hover:opacity-100 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-opacity"
+                >
+                  <svg
+                    className="w-4 h-4 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            ))}
+
+            {/* Add subtask input */}
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={newSubtaskTitle}
+                onChange={e => setNewSubtaskTitle(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleAddSubtask();
+                }}
+                placeholder="Add a subtask..."
+                className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+              />
+              <button
+                onClick={handleAddSubtask}
+                className="p-1 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+              >
+                <svg
+                  className="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Notes
+          </label>
+          <textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            onBlur={handleSave}
+            rows={4}
+            placeholder="Add notes (supports markdown)..."
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none font-mono text-sm"
+          />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex-shrink-0 px-4 py-3 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={handleDelete}
+          className="w-full px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+        >
+          Delete Task
+        </button>
+      </div>
+    </div>
+  );
+}

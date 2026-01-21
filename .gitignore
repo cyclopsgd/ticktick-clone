@@ -1,0 +1,9 @@
+node_modules/
+dist/
+out/
+.webpack/
+*.db
+*.db-journal
+.DS_Store
+*.log
+.env
