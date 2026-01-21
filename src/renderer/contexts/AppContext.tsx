@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Task, List, SmartListId, TaskWithSubtasks, Tag, TaskFilter, ViewMode } from '../../shared/types';
+import type { Task, List, SmartListId, TaskWithSubtasks, Tag, TaskFilter, ViewMode, CreateTaskDTO, Priority } from '../../shared/types';
 import { SMART_LISTS } from '../../shared/types';
 
 interface AppContextType {
@@ -13,10 +13,11 @@ interface AppContextType {
   // Tasks
   tasks: Task[];
   loadTasks: () => Promise<void>;
-  createTask: (title: string, listId?: string | null) => Promise<Task>;
+  createTask: (title: string, options?: Partial<CreateTaskDTO>) => Promise<Task>;
   updateTask: (id: string, data: Partial<Task>) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
   toggleTaskComplete: (id: string) => Promise<void>;
+  addTagToTask: (taskId: string, tagId: string) => Promise<void>;
 
   // Tags
   tags: Tag[];
@@ -146,12 +147,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [loadTags]);
 
   // Create a new task
-  const createTask = useCallback(async (title: string, listId?: string | null) => {
+  const createTask = useCallback(async (title: string, options?: Partial<CreateTaskDTO>) => {
     // Determine which list to add the task to
     let targetListId: string | null = null;
 
-    if (listId !== undefined) {
-      targetListId = listId;
+    if (options?.listId !== undefined) {
+      targetListId = options.listId;
     } else if (!SMART_LISTS.some(sl => sl.id === selectedListId)) {
       targetListId = selectedListId;
     }
@@ -159,11 +160,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const newTask = await window.electronAPI.task.create({
       title,
       listId: targetListId,
+      dueDate: options?.dueDate,
+      dueTime: options?.dueTime,
+      priority: options?.priority,
     });
 
     await loadTasks();
     return newTask;
   }, [selectedListId, loadTasks]);
+
+  // Add a tag to a task
+  const addTagToTask = useCallback(async (taskId: string, tagId: string) => {
+    await window.electronAPI.tag.addToTask(taskId, tagId);
+  }, []);
 
   // Update a task
   const updateTask = useCallback(async (id: string, data: Partial<Task>) => {
@@ -245,6 +254,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateTask,
         deleteTask,
         toggleTaskComplete,
+        addTagToTask,
         tags,
         loadTags,
         createTag,

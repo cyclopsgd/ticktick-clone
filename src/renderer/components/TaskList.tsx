@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -19,12 +19,26 @@ import { SortableTaskItem } from './SortableTaskItem';
 import { TaskItem } from './TaskItem';
 import { SearchBar } from './SearchBar';
 import { SMART_LISTS, type SmartListId, type TaskFilter } from '../../shared/types';
+import {
+  parseTaskInput,
+  getDefaultDueDateForSmartList,
+  getQuickAddPlaceholder,
+  formatParsedChips,
+} from '../utils/taskParser';
 
 export function TaskList() {
-  const { tasks, selectedListId, lists, createTask, loadTasks, tags, activeFilter, setActiveFilter } = useApp();
+  const { tasks, selectedListId, lists, createTask, createTag, addTagToTask, loadTasks, tags, activeFilter, setActiveFilter } = useApp();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Parse input as user types
+  const parsedInput = useMemo(() => parseTaskInput(newTaskTitle), [newTaskTitle]);
+  const parsedChips = useMemo(() => formatParsedChips(parsedInput), [parsedInput]);
+
+  // Get context-aware placeholder
+  const currentList = lists.find(l => l.id === selectedListId);
+  const quickAddPlaceholder = getQuickAddPlaceholder(selectedListId, currentList?.name);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -60,7 +74,47 @@ export function TaskList() {
 
   const handleAddTask = async () => {
     if (newTaskTitle.trim()) {
-      await createTask(newTaskTitle.trim());
+      // Parse the input
+      const parsed = parseTaskInput(newTaskTitle);
+
+      // Get context-aware due date if not specified in input
+      let dueDate = parsed.dueDate;
+      if (!dueDate) {
+        dueDate = getDefaultDueDateForSmartList(selectedListId);
+      }
+
+      // Find list by name if specified
+      let listId: string | null = null;
+      if (parsed.listName) {
+        const matchedList = lists.find(
+          l => l.name.toLowerCase() === parsed.listName!.toLowerCase()
+        );
+        if (matchedList) {
+          listId = matchedList.id;
+        }
+      }
+
+      // Create the task with parsed data
+      const newTask = await createTask(parsed.title || newTaskTitle.trim(), {
+        dueDate,
+        dueTime: parsed.dueTime,
+        priority: parsed.priority || undefined,
+        listId,
+      });
+
+      // Handle tags - create if they don't exist, then add to task
+      if (parsed.tags.length > 0 && newTask) {
+        for (const tagName of parsed.tags) {
+          let tag = tags.find(t => t.name.toLowerCase() === tagName.toLowerCase());
+          if (!tag) {
+            tag = await createTag(tagName);
+          }
+          await addTagToTask(newTask.id, tag.id);
+        }
+        // Reload tasks to show tags
+        await loadTasks();
+      }
+
       setNewTaskTitle('');
       setIsAddingTask(false);
     }
@@ -142,64 +196,95 @@ export function TaskList() {
       </header>
 
       {/* Quick add bar */}
-      <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 dark:border-gray-800">
-        {isAddingTask ? (
-          <div className="flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={newTaskTitle}
-              onChange={e => setNewTaskTitle(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={() => {
-                if (!newTaskTitle.trim()) {
-                  setIsAddingTask(false);
-                }
-              }}
-              placeholder="What needs to be done?"
-              className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
-            />
+      {(selectedListId as SmartListId) !== 'completed' && (
+        <div className="flex-shrink-0 px-6 py-3 border-b border-gray-100 dark:border-gray-800">
+          {isAddingTask ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={newTaskTitle}
+                  onChange={e => setNewTaskTitle(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={() => {
+                    if (!newTaskTitle.trim()) {
+                      setIsAddingTask(false);
+                    }
+                  }}
+                  placeholder={quickAddPlaceholder || "What needs to be done?"}
+                  className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800"
+                />
+                <button
+                  onClick={handleAddTask}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-lg transition-colors"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAddingTask(false);
+                    setNewTaskTitle('');
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+              {/* Parsed chips preview */}
+              {parsedChips.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pl-1">
+                  {parsedChips.map((chip, index) => (
+                    <span
+                      key={index}
+                      className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full ${
+                        chip.type === 'date'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                          : chip.type === 'priority'
+                          ? chip.label === 'high'
+                            ? 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300'
+                            : chip.label === 'medium'
+                            ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300'
+                            : 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                          : chip.type === 'tag'
+                          ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      {chip.type === 'date' && '📅 '}
+                      {chip.type === 'priority' && '⚡ '}
+                      {chip.label}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
             <button
-              onClick={handleAddTask}
-              className="px-4 py-2 text-sm font-medium text-white bg-primary-500 hover:bg-primary-600 rounded-lg transition-colors"
+              onClick={() => setIsAddingTask(true)}
+              className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors"
             >
-              Add
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              <span>Add Task</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
+                Ctrl+N
+              </span>
             </button>
-            <button
-              onClick={() => {
-                setIsAddingTask(false);
-                setNewTaskTitle('');
-              }}
-              className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setIsAddingTask(true)}
-            className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-primary-500 dark:hover:text-primary-400 transition-colors"
-          >
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            <span>Add Task</span>
-            <span className="text-xs text-gray-400 dark:text-gray-500 ml-2">
-              Ctrl+N
-            </span>
-          </button>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* Task list */}
       <div className="flex-1 overflow-y-auto">

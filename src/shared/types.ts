@@ -5,7 +5,20 @@ export type Priority = 'none' | 'low' | 'medium' | 'high';
 export type SmartListId = 'inbox' | 'today' | 'tomorrow' | 'week' | 'all' | 'completed';
 
 // View mode
-export type ViewMode = 'list' | 'calendar';
+export type ViewMode = 'list' | 'calendar' | 'matrix';
+
+// Eisenhower Matrix quadrant
+export type EisenhowerQuadrant = 'do-first' | 'schedule' | 'delegate' | 'eliminate';
+
+// Parsed task from natural language input
+export interface ParsedTaskInput {
+  title: string;
+  dueDate: string | null;
+  dueTime: string | null;
+  priority: Priority | null;
+  tags: string[];
+  listName: string | null;
+}
 
 // Recurrence patterns
 export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';

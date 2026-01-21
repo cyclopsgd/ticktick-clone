@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { TaskList } from './components/TaskList';
 import { TaskDetail } from './components/TaskDetail';
 import { CalendarView } from './components/CalendarView';
+import { EisenhowerMatrix } from './components/EisenhowerMatrix';
 import { PomodoroTimer } from './components/PomodoroTimer';
 import { HabitTracker } from './components/HabitTracker';
 import { StatsDashboard } from './components/StatsDashboard';
@@ -19,7 +20,9 @@ function AppContent() {
     <div className="flex h-screen bg-white dark:bg-gray-900">
       <Sidebar />
       <main className="flex-1 flex overflow-hidden">
-        {viewMode === 'list' ? <TaskList /> : <CalendarView />}
+        {viewMode === 'list' && <TaskList />}
+        {viewMode === 'calendar' && <CalendarView />}
+        {viewMode === 'matrix' && <EisenhowerMatrix />}
         <TaskDetail />
       </main>
 
