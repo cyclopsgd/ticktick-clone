@@ -141,6 +141,32 @@ export function HabitTracker({ isOpen, onClose }: HabitTrackerProps) {
     showToast?.(habit.archived ? 'Habit restored' : 'Habit archived');
   };
 
+  const [isClearing, setIsClearing] = useState(false);
+
+  const handleClearArchived = async () => {
+    const archivedHabits = habits.filter(h => h.archived);
+    if (archivedHabits.length === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${archivedHabits.length} archived habit${archivedHabits.length !== 1 ? 's' : ''}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsClearing(true);
+    try {
+      for (const habit of archivedHabits) {
+        await window.electronAPI.habit.delete(habit.id);
+      }
+      await loadHabits();
+      showToast?.(`Cleared ${archivedHabits.length} archived habit${archivedHabits.length !== 1 ? 's' : ''}`);
+    } catch (error) {
+      console.error('Failed to clear archived habits:', error);
+      showToast?.('Failed to clear archived habits');
+    } finally {
+      setIsClearing(false);
+    }
+  };
+
   const handleToggleCompletion = async (habitId: string, date?: string) => {
     const habit = habits.find(h => h.id === habitId);
     if (!habit) return;
@@ -536,8 +562,18 @@ export function HabitTracker({ isOpen, onClose }: HabitTrackerProps) {
                       : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
                 >
-                  Archived
+                  Archived ({habits.filter(h => h.archived).length})
                 </button>
+                {activeTab === 'archived' && habits.filter(h => h.archived).length > 0 && (
+                  <button
+                    onClick={handleClearArchived}
+                    disabled={isClearing}
+                    className="ml-auto text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                    title="Permanently delete all archived habits"
+                  >
+                    {isClearing ? 'Clearing...' : 'Clear Archived'}
+                  </button>
+                )}
               </div>
 
               {displayedHabits.length === 0 ? (
