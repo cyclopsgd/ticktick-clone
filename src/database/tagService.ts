@@ -144,6 +144,11 @@ function rowToTask(row: any): Task {
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    recurrencePattern: row.recurrence_pattern || 'none',
+    recurrenceInterval: row.recurrence_interval || 1,
+    recurrenceWeekdays: row.recurrence_weekdays ? JSON.parse(row.recurrence_weekdays) : [],
+    recurrenceEndDate: row.recurrence_end_date,
+    regenerateMode: row.regenerate_mode || 'on_completion',
   };
 }
 

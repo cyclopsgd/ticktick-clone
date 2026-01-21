@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
-import type { Priority, Subtask, Tag } from '../../shared/types';
+import type { Priority, Subtask, Tag, RecurrencePattern, RegenerateMode, Weekday } from '../../shared/types';
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'none', label: 'None', color: 'text-gray-500' },
@@ -8,6 +8,17 @@ const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'medium', label: 'Medium', color: 'text-yellow-500' },
   { value: 'high', label: 'High', color: 'text-red-500' },
 ];
+
+const RECURRENCE_OPTIONS: { value: RecurrencePattern; label: string }[] = [
+  { value: 'none', label: 'None' },
+  { value: 'daily', label: 'Daily' },
+  { value: 'weekly', label: 'Weekly' },
+  { value: 'monthly', label: 'Monthly' },
+  { value: 'yearly', label: 'Yearly' },
+  { value: 'custom', label: 'Custom' },
+];
+
+const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function TaskDetail() {
   const {
@@ -34,6 +45,11 @@ export function TaskDetail() {
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [newTagName, setNewTagName] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+  const [recurrencePattern, setRecurrencePattern] = useState<RecurrencePattern>('none');
+  const [recurrenceInterval, setRecurrenceInterval] = useState(1);
+  const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<Weekday[]>([]);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
+  const [regenerateMode, setRegenerateMode] = useState<RegenerateMode>('on_completion');
 
   // Update local state when selected task changes
   useEffect(() => {
@@ -47,6 +63,11 @@ export function TaskDetail() {
       setListId(selectedTask.listId);
       setSubtasks(selectedTask.subtasks || []);
       setTaskTags(selectedTask.tags || []);
+      setRecurrencePattern(selectedTask.recurrencePattern || 'none');
+      setRecurrenceInterval(selectedTask.recurrenceInterval || 1);
+      setRecurrenceWeekdays(selectedTask.recurrenceWeekdays || []);
+      setRecurrenceEndDate(selectedTask.recurrenceEndDate ?? '');
+      setRegenerateMode(selectedTask.regenerateMode || 'on_completion');
     }
   }, [selectedTask]);
 
@@ -351,6 +372,132 @@ export function TaskDetail() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Recurrence */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Repeat
+          </label>
+          <select
+            value={recurrencePattern}
+            onChange={e => {
+              const pattern = e.target.value as RecurrencePattern;
+              setRecurrencePattern(pattern);
+              updateTask(selectedTask.id, { recurrencePattern: pattern });
+            }}
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          >
+            {RECURRENCE_OPTIONS.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+
+          {/* Additional recurrence options */}
+          {recurrencePattern !== 'none' && (
+            <div className="mt-3 space-y-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+              {/* Interval */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">Every</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={recurrenceInterval}
+                  onChange={e => {
+                    const val = Math.max(1, parseInt(e.target.value) || 1);
+                    setRecurrenceInterval(val);
+                    updateTask(selectedTask.id, { recurrenceInterval: val });
+                  }}
+                  className="w-16 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                />
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  {recurrencePattern === 'daily' && (recurrenceInterval === 1 ? 'day' : 'days')}
+                  {recurrencePattern === 'weekly' && (recurrenceInterval === 1 ? 'week' : 'weeks')}
+                  {recurrencePattern === 'monthly' && (recurrenceInterval === 1 ? 'month' : 'months')}
+                  {recurrencePattern === 'yearly' && (recurrenceInterval === 1 ? 'year' : 'years')}
+                  {recurrencePattern === 'custom' && (recurrenceInterval === 1 ? 'day' : 'days')}
+                </span>
+              </div>
+
+              {/* Weekdays for weekly recurrence */}
+              {recurrencePattern === 'weekly' && (
+                <div>
+                  <span className="text-sm text-gray-600 dark:text-gray-400 block mb-2">On</span>
+                  <div className="flex gap-1">
+                    {WEEKDAY_NAMES.map((day, index) => (
+                      <button
+                        key={day}
+                        onClick={() => {
+                          const newWeekdays = recurrenceWeekdays.includes(index as Weekday)
+                            ? recurrenceWeekdays.filter(d => d !== index)
+                            : [...recurrenceWeekdays, index as Weekday].sort((a, b) => a - b);
+                          setRecurrenceWeekdays(newWeekdays);
+                          updateTask(selectedTask.id, { recurrenceWeekdays: newWeekdays });
+                        }}
+                        className={`w-9 h-9 text-xs rounded-full transition-colors ${
+                          recurrenceWeekdays.includes(index as Weekday)
+                            ? 'bg-primary-500 text-white'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {day}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Regenerate mode */}
+              <div>
+                <span className="text-sm text-gray-600 dark:text-gray-400 block mb-2">When completed</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      setRegenerateMode('on_completion');
+                      updateTask(selectedTask.id, { regenerateMode: 'on_completion' });
+                    }}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors ${
+                      regenerateMode === 'on_completion'
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    From completion date
+                  </button>
+                  <button
+                    onClick={() => {
+                      setRegenerateMode('fixed_schedule');
+                      updateTask(selectedTask.id, { regenerateMode: 'fixed_schedule' });
+                    }}
+                    className={`flex-1 px-3 py-2 text-xs rounded-lg border transition-colors ${
+                      regenerateMode === 'fixed_schedule'
+                        ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                        : 'border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800'
+                    }`}
+                  >
+                    From due date
+                  </button>
+                </div>
+              </div>
+
+              {/* End date */}
+              <div>
+                <span className="text-sm text-gray-600 dark:text-gray-400 block mb-2">End date (optional)</span>
+                <input
+                  type="date"
+                  value={recurrenceEndDate}
+                  onChange={e => {
+                    setRecurrenceEndDate(e.target.value);
+                    updateTask(selectedTask.id, { recurrenceEndDate: e.target.value || null });
+                  }}
+                  className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Description */}

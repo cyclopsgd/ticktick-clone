@@ -26,6 +26,12 @@ CREATE TABLE IF NOT EXISTS tasks (
   position INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  -- Recurrence fields
+  recurrence_pattern TEXT DEFAULT 'none' CHECK(recurrence_pattern IN ('none', 'daily', 'weekly', 'monthly', 'yearly', 'custom')),
+  recurrence_interval INTEGER DEFAULT 1,
+  recurrence_weekdays TEXT DEFAULT '[]',
+  recurrence_end_date TEXT,
+  regenerate_mode TEXT DEFAULT 'on_completion' CHECK(regenerate_mode IN ('on_completion', 'fixed_schedule')),
   FOREIGN KEY (list_id) REFERENCES lists(id) ON DELETE SET NULL
 );
 
@@ -83,5 +89,17 @@ export const MIGRATIONS: Migration[] = [
     version: 1,
     name: 'initial_schema',
     sql: CREATE_TABLES_SQL,
+  },
+  {
+    version: 2,
+    name: 'add_recurrence_fields',
+    sql: `
+-- Add recurrence fields to tasks table
+ALTER TABLE tasks ADD COLUMN recurrence_pattern TEXT DEFAULT 'none' CHECK(recurrence_pattern IN ('none', 'daily', 'weekly', 'monthly', 'yearly', 'custom'));
+ALTER TABLE tasks ADD COLUMN recurrence_interval INTEGER DEFAULT 1;
+ALTER TABLE tasks ADD COLUMN recurrence_weekdays TEXT DEFAULT '[]';
+ALTER TABLE tasks ADD COLUMN recurrence_end_date TEXT;
+ALTER TABLE tasks ADD COLUMN regenerate_mode TEXT DEFAULT 'on_completion' CHECK(regenerate_mode IN ('on_completion', 'fixed_schedule'));
+`,
   },
 ];

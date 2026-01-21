@@ -182,12 +182,29 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const toggleTaskComplete = useCallback(async (id: string) => {
     const task = tasks.find(t => t.id === id);
     if (task) {
-      await window.electronAPI.task.update(id, { completed: !task.completed });
-      await loadTasks();
+      if (!task.completed && task.recurrencePattern !== 'none') {
+        // Handle recurring task completion
+        const result = await window.electronAPI.task.completeRecurring(id);
+        if (result) {
+          await loadTasks();
+          // If selected task was completed, update to show the new recurring instance
+          if (selectedTask?.id === id && result.nextTask) {
+            const updated = await window.electronAPI.task.getById(result.nextTask.id);
+            setSelectedTask(updated);
+          } else if (selectedTask?.id === id) {
+            setSelectedTask(null);
+            setIsTaskDetailOpen(false);
+          }
+        }
+      } else {
+        // Normal task completion toggle
+        await window.electronAPI.task.update(id, { completed: !task.completed });
+        await loadTasks();
 
-      if (selectedTask?.id === id) {
-        const updated = await window.electronAPI.task.getById(id);
-        setSelectedTask(updated);
+        if (selectedTask?.id === id) {
+          const updated = await window.electronAPI.task.getById(id);
+          setSelectedTask(updated);
+        }
       }
     }
   }, [tasks, loadTasks, selectedTask]);

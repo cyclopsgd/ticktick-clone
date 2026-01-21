@@ -9,6 +9,9 @@ import type {
   CreateSubtaskDTO,
   UpdateSubtaskDTO,
   SmartListId,
+  Weekday,
+  RecurrencePattern,
+  RegenerateMode,
 } from '../shared/types';
 
 // Helper to convert DB row to Task object
@@ -27,6 +30,11 @@ function rowToTask(row: any): Task {
     position: row.position,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    recurrencePattern: row.recurrence_pattern || 'none',
+    recurrenceInterval: row.recurrence_interval || 1,
+    recurrenceWeekdays: row.recurrence_weekdays ? JSON.parse(row.recurrence_weekdays) : [],
+    recurrenceEndDate: row.recurrence_end_date,
+    regenerateMode: row.regenerate_mode || 'on_completion',
   };
 }
 
@@ -57,8 +65,8 @@ export const taskService = {
     const position = maxPosResult.maxPos + 1;
 
     const stmt = db.prepare(`
-      INSERT INTO tasks (id, list_id, title, description, notes, due_date, due_time, priority, position, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO tasks (id, list_id, title, description, notes, due_date, due_time, priority, position, created_at, updated_at, recurrence_pattern, recurrence_interval, recurrence_weekdays, recurrence_end_date, regenerate_mode)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
@@ -72,7 +80,12 @@ export const taskService = {
       data.priority ?? 'none',
       position,
       now,
-      now
+      now,
+      data.recurrencePattern ?? 'none',
+      data.recurrenceInterval ?? 1,
+      JSON.stringify(data.recurrenceWeekdays ?? []),
+      data.recurrenceEndDate ?? null,
+      data.regenerateMode ?? 'on_completion'
     );
 
     return this.getById(id)!;
@@ -222,6 +235,26 @@ export const taskService = {
     if (data.position !== undefined) {
       updates.push('position = ?');
       values.push(data.position);
+    }
+    if (data.recurrencePattern !== undefined) {
+      updates.push('recurrence_pattern = ?');
+      values.push(data.recurrencePattern);
+    }
+    if (data.recurrenceInterval !== undefined) {
+      updates.push('recurrence_interval = ?');
+      values.push(data.recurrenceInterval);
+    }
+    if (data.recurrenceWeekdays !== undefined) {
+      updates.push('recurrence_weekdays = ?');
+      values.push(JSON.stringify(data.recurrenceWeekdays));
+    }
+    if (data.recurrenceEndDate !== undefined) {
+      updates.push('recurrence_end_date = ?');
+      values.push(data.recurrenceEndDate);
+    }
+    if (data.regenerateMode !== undefined) {
+      updates.push('regenerate_mode = ?');
+      values.push(data.regenerateMode);
     }
 
     if (updates.length === 0) {

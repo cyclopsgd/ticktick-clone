@@ -42,6 +42,8 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.TASK_REORDER, taskIds),
     search: (filter: TaskFilter): Promise<Task[]> =>
       ipcRenderer.invoke(IPC_CHANNELS.TASK_SEARCH, filter),
+    completeRecurring: (taskId: string): Promise<{ completedTask: Task; nextTask: Task | null } | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TASK_COMPLETE_RECURRING, taskId),
   },
 
   // Subtask operations

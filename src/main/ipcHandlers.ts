@@ -3,6 +3,7 @@ import { IPC_CHANNELS, DEFAULT_SETTINGS, type AppSettings } from '../shared/type
 import { taskService, subtaskService } from '../database/taskService';
 import { listService } from '../database/listService';
 import { tagService, searchService } from '../database/tagService';
+import { recurrenceService } from '../database/recurrenceService';
 
 // Settings stored in memory (will be persisted to database later)
 let settings: AppSettings = { ...DEFAULT_SETTINGS };
@@ -39,6 +40,10 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.TASK_REORDER, (_event, taskIds) => {
     return taskService.reorder(taskIds);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TASK_COMPLETE_RECURRING, (_event, taskId) => {
+    return recurrenceService.completeRecurringTask(taskId);
   });
 
   // Subtask handlers

@@ -4,6 +4,24 @@ export type Priority = 'none' | 'low' | 'medium' | 'high';
 // Smart list identifiers
 export type SmartListId = 'inbox' | 'today' | 'tomorrow' | 'week' | 'all' | 'completed';
 
+// Recurrence patterns
+export type RecurrencePattern = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+// Regenerate mode for recurring tasks
+export type RegenerateMode = 'on_completion' | 'fixed_schedule';
+
+// Weekday numbers (0 = Sunday, 6 = Saturday)
+export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+// Recurrence configuration
+export interface RecurrenceConfig {
+  pattern: RecurrencePattern;
+  interval: number; // Every N days/weeks/months/years
+  weekdays: Weekday[]; // For weekly custom patterns
+  endDate: string | null; // Optional end date
+  regenerateMode: RegenerateMode;
+}
+
 // Task interface
 export interface Task {
   id: string;
@@ -19,6 +37,12 @@ export interface Task {
   position: number;
   createdAt: string;
   updatedAt: string;
+  // Recurrence fields
+  recurrencePattern: RecurrencePattern;
+  recurrenceInterval: number;
+  recurrenceWeekdays: Weekday[];
+  recurrenceEndDate: string | null;
+  regenerateMode: RegenerateMode;
 }
 
 // Subtask interface
@@ -67,6 +91,11 @@ export interface CreateTaskDTO {
   dueDate?: string | null;
   dueTime?: string | null;
   priority?: Priority;
+  recurrencePattern?: RecurrencePattern;
+  recurrenceInterval?: number;
+  recurrenceWeekdays?: Weekday[];
+  recurrenceEndDate?: string | null;
+  regenerateMode?: RegenerateMode;
 }
 
 export interface UpdateTaskDTO {
@@ -79,6 +108,11 @@ export interface UpdateTaskDTO {
   priority?: Priority;
   completed?: boolean;
   position?: number;
+  recurrencePattern?: RecurrencePattern;
+  recurrenceInterval?: number;
+  recurrenceWeekdays?: Weekday[];
+  recurrenceEndDate?: string | null;
+  regenerateMode?: RegenerateMode;
 }
 
 export interface CreateSubtaskDTO {
@@ -138,6 +172,7 @@ export const IPC_CHANNELS = {
   TASK_UPDATE: 'task:update',
   TASK_DELETE: 'task:delete',
   TASK_REORDER: 'task:reorder',
+  TASK_COMPLETE_RECURRING: 'task:completeRecurring',
 
   // Subtasks
   SUBTASK_CREATE: 'subtask:create',
