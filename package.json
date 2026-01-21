@@ -8,8 +8,8 @@
     "dev:vite": "vite",
     "dev:electron": "wait-on http://localhost:5173 && electron .",
     "build": "npm run build:vite && npm run build:electron",
-    "build:vite": "vite build",
-    "build:electron": "tsc -p tsconfig.main.json",
+    "build:vite": "vite build && node -e \"const fs=require('fs');const p='dist/renderer/index.html';let h=fs.readFileSync(p,'utf8');h=h.replace(/type=\\\"module\\\" crossorigin/g,'defer');fs.writeFileSync(p,h);\"",
+    "build:electron": "tsc -p tsconfig.main.json && npx esbuild src/main/preload.ts --bundle --platform=node --external:electron --outfile=dist/main/preload.js",
     "start": "electron .",
     "package": "npm run build && electron-builder"
   },
@@ -48,6 +48,7 @@
     "concurrently": "^9.2.1",
     "electron": "^40.0.0",
     "electron-builder": "^26.4.0",
+    "esbuild": "^0.27.2",
     "png-to-ico": "^3.0.1",
     "postcss": "^8.5.6",
     "sharp": "^0.34.5",

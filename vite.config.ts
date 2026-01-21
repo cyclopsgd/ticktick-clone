@@ -9,8 +9,17 @@ export default defineConfig({
   build: {
     outDir: '../../dist/renderer',
     emptyOutDir: true,
+    target: 'esnext',
+    cssCodeSplit: false,
     rollupOptions: {
       external: ['electron'],
+      output: {
+        format: 'iife',
+        entryFileNames: 'assets/[name]-[hash].js',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]',
+        inlineDynamicImports: true,
+      },
     },
   },
   resolve: {
