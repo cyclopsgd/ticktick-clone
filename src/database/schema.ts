@@ -41,11 +41,34 @@ CREATE TABLE IF NOT EXISTS subtasks (
   FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
 );
 
+-- Tags table
+CREATE TABLE IF NOT EXISTS tags (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL UNIQUE,
+  color TEXT DEFAULT '#6366f1',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Task-Tags junction table (many-to-many)
+CREATE TABLE IF NOT EXISTS task_tags (
+  task_id TEXT NOT NULL,
+  tag_id TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (task_id, tag_id),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_list_id ON tasks(list_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_completed ON tasks(completed);
+CREATE INDEX IF NOT EXISTS idx_tasks_title ON tasks(title);
 CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id);
+CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
+CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
+CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
 `;
 
 // Migration system for future schema updates

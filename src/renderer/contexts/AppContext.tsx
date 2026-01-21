@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { Task, List, SmartListId, TaskWithSubtasks } from '../../shared/types';
+import type { Task, List, SmartListId, TaskWithSubtasks, Tag, TaskFilter } from '../../shared/types';
 import { SMART_LISTS } from '../../shared/types';
 
 interface AppContextType {
@@ -18,6 +18,18 @@ interface AppContextType {
   deleteTask: (id: string) => Promise<void>;
   toggleTaskComplete: (id: string) => Promise<void>;
 
+  // Tags
+  tags: Tag[];
+  loadTags: () => Promise<void>;
+  createTag: (name: string, color?: string) => Promise<Tag>;
+  updateTag: (id: string, data: Partial<Tag>) => Promise<void>;
+  deleteTag: (id: string) => Promise<void>;
+
+  // Filtering
+  activeFilter: TaskFilter | null;
+  setActiveFilter: (filter: TaskFilter | null) => void;
+  searchTasks: (filter: TaskFilter) => Promise<Task[]>;
+
   // Selected list/task
   selectedListId: string | SmartListId;
   setSelectedListId: (id: string | SmartListId) => void;
@@ -34,9 +46,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [lists, setLists] = useState<List[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [selectedListId, setSelectedListId] = useState<string | SmartListId>('inbox');
   const [selectedTask, setSelectedTask] = useState<TaskWithSubtasks | null>(null);
   const [isTaskDetailOpen, setIsTaskDetailOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<TaskFilter | null>(null);
 
   // Load lists from database
   const loadLists = useCallback(async () => {
@@ -44,23 +58,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setLists(loadedLists);
   }, []);
 
-  // Load tasks based on selected list
+  // Load tasks based on selected list or active filter
   const loadTasks = useCallback(async () => {
     let loadedTasks: Task[];
 
-    if (SMART_LISTS.some(sl => sl.id === selectedListId)) {
+    if (activeFilter) {
+      loadedTasks = await window.electronAPI.task.search(activeFilter);
+    } else if (SMART_LISTS.some(sl => sl.id === selectedListId)) {
       loadedTasks = await window.electronAPI.task.getSmart(selectedListId as SmartListId);
     } else {
       loadedTasks = await window.electronAPI.task.getByList(selectedListId);
     }
 
     setTasks(loadedTasks);
-  }, [selectedListId]);
+  }, [selectedListId, activeFilter]);
+
+  // Load tags from database
+  const loadTags = useCallback(async () => {
+    const loadedTags = await window.electronAPI.tag.getAll();
+    setTags(loadedTags);
+  }, []);
+
+  // Search tasks with filter
+  const searchTasks = useCallback(async (filter: TaskFilter) => {
+    return await window.electronAPI.task.search(filter);
+  }, []);
 
   // Load data on mount and when selected list changes
   useEffect(() => {
     loadLists();
-  }, [loadLists]);
+    loadTags();
+  }, [loadLists, loadTags]);
 
   useEffect(() => {
     loadTasks();
@@ -87,6 +115,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setSelectedListId('inbox');
     }
   }, [loadLists, selectedListId]);
+
+  // Create a new tag
+  const createTag = useCallback(async (name: string, color?: string) => {
+    const newTag = await window.electronAPI.tag.create({ name, color });
+    setTags(prev => [...prev, newTag]);
+    return newTag;
+  }, []);
+
+  // Update a tag
+  const updateTag = useCallback(async (id: string, data: Partial<Tag>) => {
+    await window.electronAPI.tag.update(id, data);
+    await loadTags();
+  }, [loadTags]);
+
+  // Delete a tag
+  const deleteTag = useCallback(async (id: string) => {
+    await window.electronAPI.tag.delete(id);
+    await loadTags();
+  }, [loadTags]);
 
   // Create a new task
   const createTask = useCallback(async (title: string, listId?: string | null) => {
@@ -171,6 +218,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         updateTask,
         deleteTask,
         toggleTaskComplete,
+        tags,
+        loadTags,
+        createTag,
+        updateTag,
+        deleteTag,
+        activeFilter,
+        setActiveFilter,
+        searchTasks,
         selectedListId,
         setSelectedListId,
         selectedTask,

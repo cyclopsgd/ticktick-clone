@@ -90,7 +90,26 @@ export const taskService = {
     if (!task) return null;
 
     const subtasks = subtaskService.getByTaskId(id);
-    return { ...task, subtasks };
+    const tags = this.getTagsForTask(id);
+    return { ...task, subtasks, tags };
+  },
+
+  getTagsForTask(taskId: string): import('../shared/types').Tag[] {
+    const db = getDatabase();
+    const stmt = db.prepare(`
+      SELECT t.* FROM tags t
+      INNER JOIN task_tags tt ON t.id = tt.tag_id
+      WHERE tt.task_id = ?
+      ORDER BY t.name ASC
+    `);
+    const rows = stmt.all(taskId);
+    return rows.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }));
   },
 
   getAll(): Task[] {

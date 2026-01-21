@@ -43,9 +43,19 @@ export interface List {
   updatedAt: string;
 }
 
-// Task with subtasks
+// Tag interface
+export interface Tag {
+  id: string;
+  name: string;
+  color: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Task with subtasks and tags
 export interface TaskWithSubtasks extends Task {
   subtasks: Subtask[];
+  tags: Tag[];
 }
 
 // Create/Update DTOs
@@ -95,6 +105,28 @@ export interface UpdateListDTO {
   position?: number;
 }
 
+export interface CreateTagDTO {
+  name: string;
+  color?: string;
+}
+
+export interface UpdateTagDTO {
+  name?: string;
+  color?: string;
+}
+
+// Search/Filter options
+export interface TaskFilter {
+  searchQuery?: string;
+  tagIds?: string[];
+  priorities?: Priority[];
+  dateRange?: {
+    start: string;
+    end: string;
+  };
+  completed?: boolean;
+}
+
 // IPC Channel names
 export const IPC_CHANNELS = {
   // Tasks
@@ -120,6 +152,17 @@ export const IPC_CHANNELS = {
   LIST_UPDATE: 'list:update',
   LIST_DELETE: 'list:delete',
   LIST_REORDER: 'list:reorder',
+
+  // Tags
+  TAG_CREATE: 'tag:create',
+  TAG_GET_ALL: 'tag:getAll',
+  TAG_UPDATE: 'tag:update',
+  TAG_DELETE: 'tag:delete',
+  TAG_ADD_TO_TASK: 'tag:addToTask',
+  TAG_REMOVE_FROM_TASK: 'tag:removeFromTask',
+
+  // Search
+  TASK_SEARCH: 'task:search',
 
   // Settings
   SETTINGS_GET: 'settings:get',

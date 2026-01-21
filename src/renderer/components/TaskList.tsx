@@ -17,10 +17,11 @@ import {
 import { useApp } from '../contexts/AppContext';
 import { SortableTaskItem } from './SortableTaskItem';
 import { TaskItem } from './TaskItem';
-import { SMART_LISTS, type SmartListId } from '../../shared/types';
+import { SearchBar } from './SearchBar';
+import { SMART_LISTS, type SmartListId, type TaskFilter } from '../../shared/types';
 
 export function TaskList() {
-  const { tasks, selectedListId, lists, createTask, loadTasks } = useApp();
+  const { tasks, selectedListId, lists, createTask, loadTasks, tags, activeFilter, setActiveFilter } = useApp();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
@@ -38,11 +39,23 @@ export function TaskList() {
 
   // Get the current list name
   const getListName = (): string => {
+    if (activeFilter) return 'Search Results';
+
     const smartList = SMART_LISTS.find(sl => sl.id === selectedListId);
     if (smartList) return smartList.name;
 
     const userList = lists.find(l => l.id === selectedListId);
     return userList?.name ?? 'Tasks';
+  };
+
+  // Handle search filter
+  const handleSearch = (filter: TaskFilter) => {
+    setActiveFilter(filter);
+  };
+
+  // Clear search filter
+  const handleClearSearch = () => {
+    setActiveFilter(null);
   };
 
   const handleAddTask = async () => {
@@ -110,12 +123,22 @@ export function TaskList() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-          {getListName()}
-        </h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          {incompleteTasks.length} task{incompleteTasks.length !== 1 ? 's' : ''}
-        </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+              {getListName()}
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              {incompleteTasks.length} task{incompleteTasks.length !== 1 ? 's' : ''}
+              {activeFilter && ' found'}
+            </p>
+          </div>
+          <SearchBar
+            onSearch={handleSearch}
+            onClear={handleClearSearch}
+            tags={tags}
+          />
+        </div>
       </header>
 
       {/* Quick add bar */}

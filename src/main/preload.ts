@@ -5,12 +5,16 @@ import type {
   Subtask,
   TaskWithSubtasks,
   List,
+  Tag,
   CreateTaskDTO,
   UpdateTaskDTO,
   CreateSubtaskDTO,
   UpdateSubtaskDTO,
   CreateListDTO,
   UpdateListDTO,
+  CreateTagDTO,
+  UpdateTagDTO,
+  TaskFilter,
   SmartListId,
   AppSettings,
 } from '../shared/types';
@@ -36,6 +40,8 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.TASK_DELETE, id),
     reorder: (taskIds: string[]): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.TASK_REORDER, taskIds),
+    search: (filter: TaskFilter): Promise<Task[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TASK_SEARCH, filter),
   },
 
   // Subtask operations
@@ -64,6 +70,22 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.LIST_DELETE, id),
     reorder: (listIds: string[]): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.LIST_REORDER, listIds),
+  },
+
+  // Tag operations
+  tag: {
+    create: (data: CreateTagDTO): Promise<Tag> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_CREATE, data),
+    getAll: (): Promise<Tag[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_GET_ALL),
+    update: (id: string, data: UpdateTagDTO): Promise<Tag | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_UPDATE, id, data),
+    delete: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_DELETE, id),
+    addToTask: (taskId: string, tagId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_ADD_TO_TASK, taskId, tagId),
+    removeFromTask: (taskId: string, tagId: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.TAG_REMOVE_FROM_TASK, taskId, tagId),
   },
 
   // Settings operations

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
-import type { Priority, Subtask } from '../../shared/types';
+import type { Priority, Subtask, Tag } from '../../shared/types';
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'none', label: 'None', color: 'text-gray-500' },
@@ -16,6 +16,8 @@ export function TaskDetail() {
     updateTask,
     deleteTask,
     lists,
+    tags,
+    loadTags,
     isTaskDetailOpen,
     setIsTaskDetailOpen,
   } = useApp();
@@ -28,7 +30,10 @@ export function TaskDetail() {
   const [priority, setPriority] = useState<Priority>('none');
   const [listId, setListId] = useState<string | null>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [taskTags, setTaskTags] = useState<Tag[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
+  const [newTagName, setNewTagName] = useState('');
+  const [showTagInput, setShowTagInput] = useState(false);
 
   // Update local state when selected task changes
   useEffect(() => {
@@ -41,6 +46,7 @@ export function TaskDetail() {
       setPriority(selectedTask.priority);
       setListId(selectedTask.listId);
       setSubtasks(selectedTask.subtasks || []);
+      setTaskTags(selectedTask.tags || []);
     }
   }, [selectedTask]);
 
@@ -100,6 +106,44 @@ export function TaskDetail() {
     await window.electronAPI.subtask.delete(subtaskId);
     setSubtasks(subtasks.filter(s => s.id !== subtaskId));
   };
+
+  const handleAddTag = async () => {
+    if (newTagName.trim()) {
+      // Check if tag already exists
+      let tag = tags.find(t => t.name.toLowerCase() === newTagName.trim().toLowerCase());
+
+      if (!tag) {
+        // Create new tag
+        tag = await window.electronAPI.tag.create({ name: newTagName.trim() });
+        await loadTags();
+      }
+
+      // Add tag to task if not already added
+      if (!taskTags.find(t => t.id === tag!.id)) {
+        await window.electronAPI.tag.addToTask(selectedTask.id, tag.id);
+        setTaskTags([...taskTags, tag]);
+      }
+
+      setNewTagName('');
+      setShowTagInput(false);
+    }
+  };
+
+  const handleRemoveTag = async (tagId: string) => {
+    await window.electronAPI.tag.removeFromTask(selectedTask.id, tagId);
+    setTaskTags(taskTags.filter(t => t.id !== tagId));
+  };
+
+  const handleSelectExistingTag = async (tag: Tag) => {
+    if (!taskTags.find(t => t.id === tag.id)) {
+      await window.electronAPI.tag.addToTask(selectedTask.id, tag.id);
+      setTaskTags([...taskTags, tag]);
+    }
+    setShowTagInput(false);
+  };
+
+  // Tags that are not yet assigned to this task
+  const availableTags = tags.filter(tag => !taskTags.find(t => t.id === tag.id));
 
   return (
     <div className="w-96 h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col">
@@ -164,6 +208,92 @@ export function TaskDetail() {
               </option>
             ))}
           </select>
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Tags
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {taskTags.map(tag => (
+              <span
+                key={tag.id}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs rounded-full text-white"
+                style={{ backgroundColor: tag.color }}
+              >
+                #{tag.name}
+                <button
+                  onClick={() => handleRemoveTag(tag.id)}
+                  className="hover:opacity-70"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+            {!showTagInput && (
+              <button
+                onClick={() => setShowTagInput(true)}
+                className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-full hover:border-primary-500 hover:text-primary-500 transition-colors"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add tag
+              </button>
+            )}
+          </div>
+
+          {showTagInput && (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newTagName}
+                  onChange={e => setNewTagName(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') handleAddTag();
+                    if (e.key === 'Escape') setShowTagInput(false);
+                  }}
+                  placeholder="Tag name..."
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  autoFocus
+                />
+                <button
+                  onClick={handleAddTag}
+                  className="p-1 text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setShowTagInput(false)}
+                  className="p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              {availableTags.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {availableTags.map(tag => (
+                    <button
+                      key={tag.id}
+                      onClick={() => handleSelectExistingTag(tag)}
+                      className="px-2 py-0.5 text-xs rounded-full hover:opacity-80 transition-opacity"
+                      style={{ backgroundColor: tag.color, color: 'white' }}
+                    >
+                      #{tag.name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Due date & time */}

@@ -2,6 +2,7 @@ import { ipcMain, nativeTheme } from 'electron';
 import { IPC_CHANNELS, DEFAULT_SETTINGS, type AppSettings } from '../shared/types';
 import { taskService, subtaskService } from '../database/taskService';
 import { listService } from '../database/listService';
+import { tagService, searchService } from '../database/tagService';
 
 // Settings stored in memory (will be persisted to database later)
 let settings: AppSettings = { ...DEFAULT_SETTINGS };
@@ -80,6 +81,36 @@ export function setupIpcHandlers(): void {
 
   ipcMain.handle(IPC_CHANNELS.LIST_REORDER, (_event, listIds) => {
     return listService.reorder(listIds);
+  });
+
+  // Tag handlers
+  ipcMain.handle(IPC_CHANNELS.TAG_CREATE, (_event, data) => {
+    return tagService.create(data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAG_GET_ALL, () => {
+    return tagService.getAll();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAG_UPDATE, (_event, id, data) => {
+    return tagService.update(id, data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAG_DELETE, (_event, id) => {
+    return tagService.delete(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAG_ADD_TO_TASK, (_event, taskId, tagId) => {
+    return tagService.addTagToTask(taskId, tagId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.TAG_REMOVE_FROM_TASK, (_event, taskId, tagId) => {
+    return tagService.removeTagFromTask(taskId, tagId);
+  });
+
+  // Search handlers
+  ipcMain.handle(IPC_CHANNELS.TASK_SEARCH, (_event, filter) => {
+    return searchService.searchTasks(filter);
   });
 
   // Settings handlers
