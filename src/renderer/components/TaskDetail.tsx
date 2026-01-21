@@ -41,6 +41,10 @@ export function TaskDetail() {
     setIsTaskDetailOpen,
   } = useApp();
 
+  const [detailPinned, setDetailPinned] = useState(() => {
+    const saved = localStorage.getItem('taskDetailPinned');
+    return saved === 'true';
+  });
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
@@ -92,8 +96,47 @@ export function TaskDetail() {
     setReminders(taskReminders);
   };
 
-  if (!isTaskDetailOpen || !selectedTask) {
+  // Show panel if pinned OR if explicitly open with a selected task
+  const shouldShowPanel = detailPinned || (isTaskDetailOpen && selectedTask);
+
+  if (!shouldShowPanel) {
     return null;
+  }
+
+  // Show placeholder if pinned but no task selected
+  if (detailPinned && !selectedTask) {
+    return (
+      <div className="w-96 h-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">
+            Task Details
+          </h3>
+          <div className="flex items-center gap-1">
+            {/* Pin toggle */}
+            <button
+              onClick={() => {
+                setDetailPinned(false);
+                localStorage.setItem('taskDetailPinned', 'false');
+              }}
+              className="p-1 text-blue-500 bg-blue-50 dark:bg-blue-900/30 rounded transition-colors"
+              title="Unpin panel"
+            >
+              <svg className="w-5 h-5" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        {/* Placeholder content */}
+        <div className="flex-1 flex flex-col items-center justify-center text-gray-400 dark:text-gray-500 p-8">
+          <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+          </svg>
+          <p className="text-center">Select a task to view details</p>
+        </div>
+      </div>
+    );
   }
 
   const handleClose = () => {
@@ -273,24 +316,47 @@ export function TaskDetail() {
         <h3 className="font-semibold text-gray-900 dark:text-gray-100">
           Task Details
         </h3>
-        <button
-          onClick={handleClose}
-          className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
-        >
-          <svg
-            className="w-5 h-5 text-gray-500"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        <div className="flex items-center gap-1">
+          {/* Pin toggle */}
+          <button
+            onClick={() => {
+              const newPinned = !detailPinned;
+              setDetailPinned(newPinned);
+              localStorage.setItem('taskDetailPinned', String(newPinned));
+            }}
+            className={`p-1 rounded transition-colors ${
+              detailPinned
+                ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+            }`}
+            title={detailPinned ? 'Unpin panel' : 'Pin panel'}
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg className="w-5 h-5" fill={detailPinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+            </svg>
+          </button>
+          {/* Close button - only show when not pinned */}
+          {!detailPinned && (
+            <button
+              onClick={handleClose}
+              className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+            >
+              <svg
+                className="w-5 h-5 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Content */}

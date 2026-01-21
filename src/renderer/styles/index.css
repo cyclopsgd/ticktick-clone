@@ -209,3 +209,38 @@ textarea:focus {
 .animate-subtle-pulse {
   animation: subtle-pulse 2s ease-in-out infinite;
 }
+
+/* Firework animations */
+@keyframes firework-burst {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes particle-fly {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-60px) scale(0);
+    opacity: 0;
+  }
+}
+
+.animate-firework {
+  animation: firework-burst 1s ease-out forwards;
+}
+
+.animate-particle {
+  animation: particle-fly 0.8s ease-out forwards;
+}

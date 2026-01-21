@@ -30,6 +30,11 @@ export function TaskList() {
   const { tasks, selectedListId, lists, createTask, createTag, addTagToTask, loadTasks, tags, activeFilter, setActiveFilter } = useApp();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [quickAddPinned, setQuickAddPinned] = useState(() => {
+    // Load pinned state from localStorage
+    const saved = localStorage.getItem('quickAddPinned');
+    return saved === 'true';
+  });
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Parse input as user types
@@ -83,14 +88,23 @@ export function TaskList() {
         dueDate = getDefaultDueDateForSmartList(selectedListId);
       }
 
-      // Find list by name if specified
+      // Determine list assignment
       let listId: string | null = null;
+
+      // First check if list was specified in the input (e.g., "task ^listname")
       if (parsed.listName) {
         const matchedList = lists.find(
           l => l.name.toLowerCase() === parsed.listName!.toLowerCase()
         );
         if (matchedList) {
           listId = matchedList.id;
+        }
+      } else {
+        // Auto-assign to current list if viewing a user list (not a smart list)
+        const isSmartList = SMART_LISTS.some(sl => sl.id === selectedListId);
+        if (!isSmartList && selectedListId) {
+          // It's a user list - auto-assign the task to it
+          listId = selectedListId;
         }
       }
 
@@ -116,7 +130,10 @@ export function TaskList() {
       }
 
       setNewTaskTitle('');
-      setIsAddingTask(false);
+      // Only hide the input if not pinned
+      if (!quickAddPinned) {
+        setIsAddingTask(false);
+      }
     }
   };
 
@@ -198,7 +215,7 @@ export function TaskList() {
       {/* Quick add bar - compact */}
       {(selectedListId as SmartListId) !== 'completed' && (
         <div className="flex-shrink-0 px-4 py-2 border-b border-gray-100 dark:border-gray-800">
-          {isAddingTask ? (
+          {isAddingTask || quickAddPinned ? (
             <div className="space-y-1.5">
               <div className="flex items-center gap-2">
                 <input
@@ -208,7 +225,7 @@ export function TaskList() {
                   onChange={e => setNewTaskTitle(e.target.value)}
                   onKeyDown={handleKeyDown}
                   onBlur={() => {
-                    if (!newTaskTitle.trim()) {
+                    if (!newTaskTitle.trim() && !quickAddPinned) {
                       setIsAddingTask(false);
                     }
                   }}
@@ -216,19 +233,43 @@ export function TaskList() {
                   className="flex-1 px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 />
                 <button
+                  onMouseDown={e => e.preventDefault()} // Prevent input blur
                   onClick={handleAddTask}
                   className="px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded transition-colors"
                 >
                   Add
                 </button>
+                {!quickAddPinned && (
+                  <button
+                    onMouseDown={e => e.preventDefault()} // Prevent input blur
+                    onClick={() => {
+                      setIsAddingTask(false);
+                      setNewTaskTitle('');
+                    }}
+                    className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                )}
+                {/* Pin toggle button */}
                 <button
+                  onMouseDown={e => e.preventDefault()} // Prevent input blur
                   onClick={() => {
-                    setIsAddingTask(false);
-                    setNewTaskTitle('');
+                    const newPinned = !quickAddPinned;
+                    setQuickAddPinned(newPinned);
+                    localStorage.setItem('quickAddPinned', String(newPinned));
+                    if (newPinned) setIsAddingTask(true);
                   }}
-                  className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors"
+                  className={`p-1.5 rounded transition-colors ${
+                    quickAddPinned
+                      ? 'text-blue-500 bg-blue-50 dark:bg-blue-900/30'
+                      : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                  title={quickAddPinned ? 'Unpin quick add' : 'Pin quick add'}
                 >
-                  Cancel
+                  <svg className="w-4 h-4" fill={quickAddPinned ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
                 </button>
               </div>
               {/* Parsed chips preview */}

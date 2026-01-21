@@ -4,7 +4,14 @@ import { useTheme } from '../contexts/ThemeContext';
 import { SMART_LISTS, type SmartListId } from '../../shared/types';
 import { CalendarView } from './CalendarView';
 
-export function Sidebar() {
+interface SidebarProps {
+  onOpenPomodoro?: () => void;
+  onOpenHabits?: () => void;
+  onOpenStats?: () => void;
+  onShowCredit?: () => void;
+}
+
+export function Sidebar({ onOpenPomodoro, onOpenHabits, onOpenStats, onShowCredit }: SidebarProps) {
   const { lists, selectedListId, setSelectedListId, createList, deleteList, viewMode, setViewMode } = useApp();
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [isCreatingList, setIsCreatingList] = useState(false);
@@ -127,34 +134,13 @@ export function Sidebar() {
         </div>
       )}
 
-      {/* Smart Lists */}
+      {/* Lists Navigation */}
       <nav className="flex-1 overflow-y-auto p-1.5">
+        {/* User Lists - shown first */}
         <div className="mb-3">
-          <h2 className="px-2 py-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-            Smart Lists
-          </h2>
-          <ul>
-            {SMART_LISTS.map(smartList => (
-              <li key={smartList.id}>
-                <button
-                  onClick={() => setSelectedListId(smartList.id)}
-                  className={`sidebar-item w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm ${
-                    selectedListId === smartList.id ? 'active' : ''
-                  }`}
-                >
-                  <span className="text-base">{smartList.icon}</span>
-                  <span className="flex-1">{smartList.name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        {/* User Lists */}
-        <div>
           <div className="flex items-center justify-between px-2 py-1">
             <h2 className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Lists
+              My Lists
             </h2>
             <button
               onClick={() => setIsCreatingList(true)}
@@ -199,9 +185,9 @@ export function Sidebar() {
           <ul>
             {lists.map(list => (
               <li key={list.id} className="group">
-                <button
+                <div
                   onClick={() => setSelectedListId(list.id)}
-                  className={`sidebar-item w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm ${
+                  className={`sidebar-item w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm cursor-pointer ${
                     selectedListId === list.id ? 'active' : ''
                   }`}
                 >
@@ -234,12 +220,73 @@ export function Sidebar() {
                       />
                     </svg>
                   </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Smart Lists - shown below user lists */}
+        <div>
+          <h2 className="px-2 py-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+            Smart Lists
+          </h2>
+          <ul>
+            {SMART_LISTS.map(smartList => (
+              <li key={smartList.id}>
+                <button
+                  onClick={() => setSelectedListId(smartList.id)}
+                  className={`sidebar-item w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left text-sm ${
+                    selectedListId === smartList.id ? 'active' : ''
+                  }`}
+                >
+                  <span className="text-base">{smartList.icon}</span>
+                  <span className="flex-1">{smartList.name}</span>
                 </button>
               </li>
             ))}
           </ul>
         </div>
       </nav>
+
+      {/* Productivity Tools */}
+      <div className="px-2 py-2 border-t border-gray-200 dark:border-gray-700">
+        <h2 className="px-2 py-1 text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+          Tools
+        </h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={onOpenPomodoro}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 rounded-md transition-colors"
+            title="Pomodoro Timer (Alt+P)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Focus</span>
+          </button>
+          <button
+            onClick={onOpenHabits}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-green-50 dark:hover:bg-green-900/20 hover:text-green-600 dark:hover:text-green-400 rounded-md transition-colors"
+            title="Habit Tracker (Alt+H)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Habits</span>
+          </button>
+          <button
+            onClick={onOpenStats}
+            className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:text-purple-600 dark:hover:text-purple-400 rounded-md transition-colors"
+            title="Statistics (Alt+S)"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            <span>Stats</span>
+          </button>
+        </div>
+      </div>
 
       {/* Theme toggle */}
       <div className="px-2 py-2 border-t border-gray-200 dark:border-gray-700">
@@ -267,6 +314,17 @@ export function Sidebar() {
             </svg>
           )}
           <span className="capitalize">{theme}</span>
+        </button>
+      </div>
+
+      {/* Credit button - Easter egg */}
+      <div className="px-2 pb-2">
+        <button
+          onClick={onShowCredit}
+          className="w-full flex items-center justify-center gap-1 px-2 py-1 text-[10px] text-gray-400 dark:text-gray-500 hover:text-purple-500 dark:hover:text-purple-400 transition-colors rounded"
+        >
+          <span>Proof that George made it</span>
+          <span>🪔</span>
         </button>
       </div>
     </aside>
