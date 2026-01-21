@@ -66,6 +66,18 @@ CREATE TABLE IF NOT EXISTS task_tags (
   FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
 );
 
+-- Reminders table
+CREATE TABLE IF NOT EXISTS reminders (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  reminder_time TEXT NOT NULL,
+  triggered INTEGER DEFAULT 0,
+  snoozed_until TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
 -- Indexes for performance
 CREATE INDEX IF NOT EXISTS idx_tasks_list_id ON tasks(list_id);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
@@ -75,6 +87,8 @@ CREATE INDEX IF NOT EXISTS idx_subtasks_task_id ON subtasks(task_id);
 CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);
 CREATE INDEX IF NOT EXISTS idx_task_tags_task_id ON task_tags(task_id);
 CREATE INDEX IF NOT EXISTS idx_task_tags_tag_id ON task_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_task_id ON reminders(task_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(reminder_time);
 `;
 
 // Migration system for future schema updates
@@ -100,6 +114,26 @@ ALTER TABLE tasks ADD COLUMN recurrence_interval INTEGER DEFAULT 1;
 ALTER TABLE tasks ADD COLUMN recurrence_weekdays TEXT DEFAULT '[]';
 ALTER TABLE tasks ADD COLUMN recurrence_end_date TEXT;
 ALTER TABLE tasks ADD COLUMN regenerate_mode TEXT DEFAULT 'on_completion' CHECK(regenerate_mode IN ('on_completion', 'fixed_schedule'));
+`,
+  },
+  {
+    version: 3,
+    name: 'add_reminders_table',
+    sql: `
+-- Reminders table
+CREATE TABLE IF NOT EXISTS reminders (
+  id TEXT PRIMARY KEY,
+  task_id TEXT NOT NULL,
+  reminder_time TEXT NOT NULL,
+  triggered INTEGER DEFAULT 0,
+  snoozed_until TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_reminders_task_id ON reminders(task_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_time ON reminders(reminder_time);
 `,
   },
 ];

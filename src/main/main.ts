@@ -2,6 +2,7 @@ import { app, BrowserWindow, globalShortcut } from 'electron';
 import path from 'path';
 import { initDatabase, closeDatabase } from '../database';
 import { setupIpcHandlers } from './ipcHandlers';
+import { initReminderManager } from './reminderManager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -33,6 +34,11 @@ function createWindow(): void {
   // Show window when ready
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show();
+
+    // Initialize reminder manager after window is ready
+    if (mainWindow) {
+      initReminderManager(mainWindow);
+    }
   });
 
   // Load the app

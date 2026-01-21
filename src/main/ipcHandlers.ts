@@ -4,6 +4,8 @@ import { taskService, subtaskService } from '../database/taskService';
 import { listService } from '../database/listService';
 import { tagService, searchService } from '../database/tagService';
 import { recurrenceService } from '../database/recurrenceService';
+import { reminderService } from '../database/reminderService';
+import { addAndScheduleReminder, snoozeReminder, deleteReminder } from './reminderManager';
 
 // Settings stored in memory (will be persisted to database later)
 let settings: AppSettings = { ...DEFAULT_SETTINGS };
@@ -116,6 +118,31 @@ export function setupIpcHandlers(): void {
   // Search handlers
   ipcMain.handle(IPC_CHANNELS.TASK_SEARCH, (_event, filter) => {
     return searchService.searchTasks(filter);
+  });
+
+  // Reminder handlers
+  ipcMain.handle(IPC_CHANNELS.REMINDER_CREATE, (_event, taskId, reminderTime) => {
+    return addAndScheduleReminder(taskId, reminderTime);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REMINDER_GET_BY_TASK, (_event, taskId) => {
+    return reminderService.getByTaskId(taskId);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REMINDER_GET_PENDING, () => {
+    return reminderService.getPending();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REMINDER_UPDATE, (_event, id, data) => {
+    return reminderService.update(id, data);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REMINDER_DELETE, (_event, id) => {
+    return deleteReminder(id);
+  });
+
+  ipcMain.handle(IPC_CHANNELS.REMINDER_SNOOZE, (_event, id, durationMinutes) => {
+    return snoozeReminder(id, durationMinutes);
   });
 
   // Settings handlers

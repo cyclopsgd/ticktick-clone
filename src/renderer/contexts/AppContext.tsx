@@ -94,6 +94,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadTasks();
   }, [loadTasks]);
 
+  // Listen for reminder notification clicks
+  useEffect(() => {
+    window.electronAPI.reminder.onClicked((taskId) => {
+      setSelectedTaskId(taskId);
+    });
+  }, []);
+
   // Create a new list
   const createList = useCallback(async (name: string, color?: string, icon?: string) => {
     const newList = await window.electronAPI.list.create({ name, color, icon });

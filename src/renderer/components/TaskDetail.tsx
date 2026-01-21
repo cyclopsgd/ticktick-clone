@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../contexts/AppContext';
-import type { Priority, Subtask, Tag, RecurrencePattern, RegenerateMode, Weekday } from '../../shared/types';
+import type { Priority, Subtask, Tag, Reminder, RecurrencePattern, RegenerateMode, Weekday } from '../../shared/types';
 
 const PRIORITY_OPTIONS: { value: Priority; label: string; color: string }[] = [
   { value: 'none', label: 'None', color: 'text-gray-500' },
@@ -19,6 +19,14 @@ const RECURRENCE_OPTIONS: { value: RecurrencePattern; label: string }[] = [
 ];
 
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+const REMINDER_PRESETS = [
+  { label: 'At due time', minutes: 0 },
+  { label: '10 minutes before', minutes: -10 },
+  { label: '30 minutes before', minutes: -30 },
+  { label: '1 hour before', minutes: -60 },
+  { label: '1 day before', minutes: -1440 },
+];
 
 export function TaskDetail() {
   const {
@@ -50,6 +58,10 @@ export function TaskDetail() {
   const [recurrenceWeekdays, setRecurrenceWeekdays] = useState<Weekday[]>([]);
   const [recurrenceEndDate, setRecurrenceEndDate] = useState('');
   const [regenerateMode, setRegenerateMode] = useState<RegenerateMode>('on_completion');
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [showReminderInput, setShowReminderInput] = useState(false);
+  const [customReminderDate, setCustomReminderDate] = useState('');
+  const [customReminderTime, setCustomReminderTime] = useState('');
 
   // Update local state when selected task changes
   useEffect(() => {
@@ -68,8 +80,17 @@ export function TaskDetail() {
       setRecurrenceWeekdays(selectedTask.recurrenceWeekdays || []);
       setRecurrenceEndDate(selectedTask.recurrenceEndDate ?? '');
       setRegenerateMode(selectedTask.regenerateMode || 'on_completion');
+
+      // Load reminders for the task
+      loadReminders(selectedTask.id);
     }
   }, [selectedTask]);
+
+  // Load reminders for a task
+  const loadReminders = async (taskId: string) => {
+    const taskReminders = await window.electronAPI.reminder.getByTask(taskId);
+    setReminders(taskReminders);
+  };
 
   if (!isTaskDetailOpen || !selectedTask) {
     return null;
@@ -161,6 +182,85 @@ export function TaskDetail() {
       setTaskTags([...taskTags, tag]);
     }
     setShowTagInput(false);
+  };
+
+  // Add reminder from preset (based on due date/time)
+  const handleAddPresetReminder = async (minutesOffset: number) => {
+    if (!dueDate) {
+      alert('Please set a due date first to use preset reminders.');
+      return;
+    }
+
+    const dueDateObj = new Date(dueDate);
+    if (dueTime) {
+      const [hours, minutes] = dueTime.split(':').map(Number);
+      dueDateObj.setHours(hours, minutes, 0, 0);
+    } else {
+      dueDateObj.setHours(9, 0, 0, 0); // Default to 9 AM if no time set
+    }
+
+    // Add offset (negative means before)
+    dueDateObj.setMinutes(dueDateObj.getMinutes() + minutesOffset);
+
+    const reminderTime = dueDateObj.toISOString();
+    const reminder = await window.electronAPI.reminder.create(selectedTask.id, reminderTime);
+    setReminders([...reminders, reminder]);
+    setShowReminderInput(false);
+  };
+
+  // Add custom reminder
+  const handleAddCustomReminder = async () => {
+    if (!customReminderDate) {
+      alert('Please select a date for the reminder.');
+      return;
+    }
+
+    const reminderDate = new Date(customReminderDate);
+    if (customReminderTime) {
+      const [hours, minutes] = customReminderTime.split(':').map(Number);
+      reminderDate.setHours(hours, minutes, 0, 0);
+    } else {
+      reminderDate.setHours(9, 0, 0, 0); // Default to 9 AM
+    }
+
+    const reminderTime = reminderDate.toISOString();
+    const reminder = await window.electronAPI.reminder.create(selectedTask.id, reminderTime);
+    setReminders([...reminders, reminder]);
+    setCustomReminderDate('');
+    setCustomReminderTime('');
+    setShowReminderInput(false);
+  };
+
+  // Delete reminder
+  const handleDeleteReminder = async (reminderId: string) => {
+    await window.electronAPI.reminder.delete(reminderId);
+    setReminders(reminders.filter(r => r.id !== reminderId));
+  };
+
+  // Format reminder time for display
+  const formatReminderTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const reminderDateOnly = new Date(date);
+    reminderDateOnly.setHours(0, 0, 0, 0);
+
+    const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
+    if (reminderDateOnly.getTime() === today.getTime()) {
+      return `Today at ${timeStr}`;
+    } else if (reminderDateOnly.getTime() === tomorrow.getTime()) {
+      return `Tomorrow at ${timeStr}`;
+    } else {
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+    }
   };
 
   // Tags that are not yet assigned to this task
@@ -495,6 +595,129 @@ export function TaskDetail() {
                   }}
                   className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                 />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Reminders */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Reminders
+          </label>
+
+          {/* Existing reminders */}
+          {reminders.length > 0 && (
+            <div className="space-y-2 mb-2">
+              {reminders.map(reminder => (
+                <div
+                  key={reminder.id}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                    reminder.triggered
+                      ? 'bg-gray-100 dark:bg-gray-800 text-gray-400'
+                      : 'bg-yellow-50 dark:bg-yellow-900/20'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <svg
+                      className={`w-4 h-4 ${
+                        reminder.triggered ? 'text-gray-400' : 'text-yellow-500'
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
+                      />
+                    </svg>
+                    <span className={`text-sm ${reminder.triggered ? 'line-through' : ''}`}>
+                      {formatReminderTime(reminder.reminderTime)}
+                    </span>
+                    {reminder.triggered && (
+                      <span className="text-xs text-gray-400">(sent)</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDeleteReminder(reminder.id)}
+                    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                  >
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Add reminder button / input */}
+          {!showReminderInput ? (
+            <button
+              onClick={() => setShowReminderInput(true)}
+              className="inline-flex items-center gap-1 px-2 py-1 text-xs text-gray-500 dark:text-gray-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg hover:border-primary-500 hover:text-primary-500 transition-colors"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add reminder
+            </button>
+          ) : (
+            <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg space-y-3">
+              {/* Preset reminders */}
+              <div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 block mb-2">Quick add</span>
+                <div className="flex flex-wrap gap-1">
+                  {REMINDER_PRESETS.map(preset => (
+                    <button
+                      key={preset.label}
+                      onClick={() => handleAddPresetReminder(preset.minutes)}
+                      className="px-2 py-1 text-xs bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Custom reminder */}
+              <div>
+                <span className="text-xs text-gray-500 dark:text-gray-400 block mb-2">Custom time</span>
+                <div className="flex gap-2">
+                  <input
+                    type="date"
+                    value={customReminderDate}
+                    onChange={e => setCustomReminderDate(e.target.value)}
+                    className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  />
+                  <input
+                    type="time"
+                    value={customReminderTime}
+                    onChange={e => setCustomReminderTime(e.target.value)}
+                    className="w-24 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                  />
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={handleAddCustomReminder}
+                    className="flex-1 px-3 py-1 text-xs font-medium text-white bg-primary-500 hover:bg-primary-600 rounded transition-colors"
+                  >
+                    Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowReminderInput(false);
+                      setCustomReminderDate('');
+                      setCustomReminderTime('');
+                    }}
+                    className="px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
             </div>
           )}

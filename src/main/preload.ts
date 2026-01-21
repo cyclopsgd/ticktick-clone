@@ -6,6 +6,7 @@ import type {
   TaskWithSubtasks,
   List,
   Tag,
+  Reminder,
   CreateTaskDTO,
   UpdateTaskDTO,
   CreateSubtaskDTO,
@@ -14,6 +15,7 @@ import type {
   UpdateListDTO,
   CreateTagDTO,
   UpdateTagDTO,
+  UpdateReminderDTO,
   TaskFilter,
   SmartListId,
   AppSettings,
@@ -88,6 +90,29 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.TAG_ADD_TO_TASK, taskId, tagId),
     removeFromTask: (taskId: string, tagId: string): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.TAG_REMOVE_FROM_TASK, taskId, tagId),
+  },
+
+  // Reminder operations
+  reminder: {
+    create: (taskId: string, reminderTime: string): Promise<Reminder> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_CREATE, taskId, reminderTime),
+    getByTask: (taskId: string): Promise<Reminder[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_GET_BY_TASK, taskId),
+    getPending: (): Promise<Reminder[]> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_GET_PENDING),
+    update: (id: string, data: UpdateReminderDTO): Promise<Reminder | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_UPDATE, id, data),
+    delete: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_DELETE, id),
+    snooze: (id: string, durationMinutes: number): Promise<Reminder | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.REMINDER_SNOOZE, id, durationMinutes),
+    // Listen for reminder events
+    onTriggered: (callback: (data: { reminderId: string; taskId: string; taskTitle: string }) => void) => {
+      ipcRenderer.on('reminder:triggered', (_event, data) => callback(data));
+    },
+    onClicked: (callback: (taskId: string) => void) => {
+      ipcRenderer.on('reminder:clicked', (_event, taskId) => callback(taskId));
+    },
   },
 
   // Settings operations

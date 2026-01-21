@@ -76,10 +76,22 @@ export interface Tag {
   updatedAt: string;
 }
 
-// Task with subtasks and tags
+// Reminder interface
+export interface Reminder {
+  id: string;
+  taskId: string;
+  reminderTime: string; // ISO datetime
+  triggered: boolean;
+  snoozedUntil: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Task with subtasks, tags, and reminders
 export interface TaskWithSubtasks extends Task {
   subtasks: Subtask[];
   tags: Tag[];
+  reminders?: Reminder[];
 }
 
 // Create/Update DTOs
@@ -149,6 +161,17 @@ export interface UpdateTagDTO {
   color?: string;
 }
 
+export interface CreateReminderDTO {
+  taskId: string;
+  reminderTime: string; // ISO datetime
+}
+
+export interface UpdateReminderDTO {
+  reminderTime?: string;
+  triggered?: boolean;
+  snoozedUntil?: string | null;
+}
+
 // Search/Filter options
 export interface TaskFilter {
   searchQuery?: string;
@@ -198,6 +221,14 @@ export const IPC_CHANNELS = {
 
   // Search
   TASK_SEARCH: 'task:search',
+
+  // Reminders
+  REMINDER_CREATE: 'reminder:create',
+  REMINDER_GET_BY_TASK: 'reminder:getByTask',
+  REMINDER_GET_PENDING: 'reminder:getPending',
+  REMINDER_UPDATE: 'reminder:update',
+  REMINDER_DELETE: 'reminder:delete',
+  REMINDER_SNOOZE: 'reminder:snooze',
 
   // Settings
   SETTINGS_GET: 'settings:get',
